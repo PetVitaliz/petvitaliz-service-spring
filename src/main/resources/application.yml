@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: petvitaliz-spring
+  datasource:
+    # Exemplo: jdbc:mysql://localhost:3306/petvitaliz
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # O banco ja existe (criado pelo Prisma). O Hibernate nao deve alterar nada.
+      ddl-auto: none
+    show-sql: false
+  servlet:
+    multipart:
+      max-file-size: 4MB
+      max-request-size: 4MB
+
+server:
+  port: ${PORT:3000}
