@@ -22,7 +22,6 @@ public class ResetSenha {
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
 
-    /** Codigo de 6 digitos enviado por e-mail. */
     @Column(nullable = false)
     private String token;
 

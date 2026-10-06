@@ -1,21 +1,42 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: petvitaliz-spring
   datasource:
-    # Exemplo: jdbc:mysql://localhost:3306/petvitaliz
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
-      # O banco ja existe (criado pelo Prisma). O Hibernate nao deve alterar nada.
       ddl-auto: none
     show-sql: false
   servlet:
     multipart:
       max-file-size: 4MB
       max-request-size: 4MB
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${EMAIL_USER}
+    password: ${EMAIL_PASS}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  cookies:
+    secure: ${COOKIE_SECURE:true}
+    same-site: ${COOKIE_SAMESITE:None}
+  cors:
+    frontend-url: ${FRONTEND_URL:}
 
 server:
   port: ${PORT:3000}
