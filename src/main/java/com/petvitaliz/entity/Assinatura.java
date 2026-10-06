@@ -19,7 +19,6 @@ public class Assinatura {
     @Column(name = "id_assinatura")
     private Integer id;
 
-    /** No banco original nao existe FK para usuario, entao guardamos so o id. */
     @Column(name = "id_usuario", nullable = false)
     private Integer idUsuario;
 

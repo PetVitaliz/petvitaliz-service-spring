@@ -3,7 +3,6 @@ package com.petvitaliz.enums;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-
 public enum ConsultaStatus {
     EM_ESPERA("em espera", "em_espera"),
     EM_ANDAMENTO("em andamento", "em_andamento"),

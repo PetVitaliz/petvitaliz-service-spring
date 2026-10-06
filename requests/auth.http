@@ -1,0 +1,76 @@
+### Health
+GET http://localhost:3000/health
+
+### Cadastro de usuario
+POST http://localhost:3000/user/cadastro
+Content-Type: application/json
+
+{
+  "nome": "Maria",
+  "sobrenome": "Silva",
+  "email": "maria.teste@exemplo.com",
+  "senha": "123456",
+  "CPF": "12345678901",
+  "telefone": "11999999999",
+  "genero": "f",
+  "data_nascimento": "1995-04-20"
+}
+
+### Login de usuario (grava o cookie "token")
+POST http://localhost:3000/user/login
+Content-Type: application/json
+
+{
+  "email": "maria.teste@exemplo.com",
+  "senha": "123456"
+}
+
+### Rota protegida de usuario (precisa do cookie; sem ele: 401)
+GET http://localhost:3000/user/home
+
+### Logout
+GET http://localhost:3000/user/logout
+
+### Login de administrador (grava "token_adm")
+POST http://localhost:3000/user/login/adm
+Content-Type: application/json
+
+{
+  "email": "admin@exemplo.com",
+  "senha": "123456"
+}
+
+### Login de funcionario (grava "token_funcionario")
+POST http://localhost:3000/user/login/funcionario
+Content-Type: application/json
+
+{
+  "email": "func@petvitalizfuncionario.com",
+  "senha": "123456"
+}
+
+### Reset de senha - passo 1: pedir o codigo
+POST http://localhost:3000/user/login/esqueci-a-senha
+Content-Type: application/json
+
+{
+  "email": "maria.teste@exemplo.com"
+}
+
+### Reset de senha - passo 2: confirmar (agora com e-mail + codigo)
+POST http://localhost:3000/user/login/esqueci-a-senha-confirmar
+Content-Type: application/json
+
+{
+  "email": "maria.teste@exemplo.com",
+  "codigo": "000000"
+}
+
+### Reset de senha - passo 3: nova senha (usa o cookie "token_reset")
+PUT http://localhost:3000/user/login/alterar-senha
+Content-Type: application/json
+
+{
+  "senha1": "novaSenha123",
+  "senha2": "novaSenha123"
+}

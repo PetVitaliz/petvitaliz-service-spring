@@ -31,7 +31,6 @@ public class Consulta {
     @Column(name = "data_consulta", nullable = false)
     private LocalDate dataConsulta;
 
-    /** Formato "HH:mm" (VARCHAR no banco). */
     @Column(name = "hora_inicio", nullable = false, length = 10)
     private String horaInicio;
 

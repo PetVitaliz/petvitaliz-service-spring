@@ -34,7 +34,6 @@ public class Funcionario {
     @Column(nullable = false)
     private Boolean ativo = true;
 
-    /** Quantas consultas o funcionario ainda pode receber no dia (comeca em 8). */
     @Column(nullable = false)
     private Integer carga = 8;
 
