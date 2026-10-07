@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+// 401 quando nao tem cookie; 403 quando o cookie existe mas o token e invalido/expirado.
 @Component
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 

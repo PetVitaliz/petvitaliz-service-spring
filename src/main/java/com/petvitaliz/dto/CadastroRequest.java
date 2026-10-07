@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Os nomes JSON sao os mesmos da API Express (CPF e data_nascimento). */
 public record CadastroRequest(
 
         @NotNull(message = "Nome é obrigatório e deve ter pelo menos 2 caracteres")

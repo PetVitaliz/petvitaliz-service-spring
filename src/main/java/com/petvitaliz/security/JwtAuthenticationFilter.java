@@ -36,6 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtService.validar(token);
 
+                // Um token de um tipo nao vale no cookie de outro (ex.: token de reset como login).
                 if (!tipo.getRole().equals(claims.get("role", String.class))) {
                     throw new JwtException("Tipo de token incorreto");
                 }
