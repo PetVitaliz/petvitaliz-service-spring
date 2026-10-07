@@ -74,3 +74,37 @@ Content-Type: application/json
   "senha1": "novaSenha123",
   "senha2": "novaSenha123"
 }
+
+### ---------------- Etapa 3a: usuario ----------------
+
+### Home publica (lista produtos)
+GET http://localhost:3000/
+
+### Home logada
+GET http://localhost:3000/user/home
+
+### Perfil
+GET http://localhost:3000/user/buscar/perfil
+
+### Contato (envia e-mail de verdade!)
+POST http://localhost:3000/user/contato
+Content-Type: application/json
+
+{
+  "email": "maria.teste@exemplo.com",
+  "mensagem": "Olá, gostaria de saber mais sobre os planos."
+}
+
+### Plano atual
+GET http://localhost:3000/user/planos
+
+### Assinar plano (troque o id_produto por um que exista; envia e-mail)
+POST http://localhost:3000/user/planos/pagamento
+Content-Type: application/json
+
+{
+  "id_produto": 1
+}
+
+### Cancelar plano
+DELETE http://localhost:3000/user/planos/cancelar
