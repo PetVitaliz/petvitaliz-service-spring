@@ -30,7 +30,7 @@ public class HomeController {
         this.usuarioService = usuarioService;
     }
 
-    // NAO logada
+    // parte NAO logada
 
     @GetMapping("/")
     public Map<String, Object> homeNaoLogada() {

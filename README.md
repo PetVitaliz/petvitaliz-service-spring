@@ -12,7 +12,7 @@ Migracao da API `petvitaliz-service` (Express + Prisma) para Spring Boot 3.5 / J
 - [x] 1. Projeto, entidades, repositories, /health
 - [x] 2. Seguranca (JWT em cookie, login, reset de senha, CORS)
 - [x] 3a. Usuario: home, servicos, contato, perfil, planos
-- [ ] 3b. Pets (upload Cloudinary)
+- [x] 3b. Pets: listar, cadastrar, editar, excluir (upload Cloudinary)
 - [ ] 4. Agendamento e consultas
 - [ ] 5. Funcionario e administrador
 - [ ] 6. E-mails restantes (contato, plano), springdoc, Dockerfile
