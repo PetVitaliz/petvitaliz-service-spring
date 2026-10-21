@@ -188,7 +188,6 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "email não encontrado"));
 
-        // O codigo vale 10 min; se o ultimo foi criado ha menos de 1 min, segura o novo pedido.
         resetSenhaRepository.findFirstByUsuarioIdOrderByExpiraEmDesc(usuario.getId()).ifPresent(ultimo -> {
             if (ultimo.getExpiraEm().isAfter(LocalDateTime.now().plusMinutes(9))) {
                 throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
@@ -209,7 +208,6 @@ public class AuthService {
         try {
             emailService.enviarCodigoReset(usuario.getNome(), usuario.getSobrenome(), email, codigo);
         } catch (RuntimeException e) {
-            // A ApiException desfaz a transacao: o codigo que nao foi entregue nao fica salvo.
             throw new ApiException(HttpStatus.BAD_GATEWAY,
                     "Não foi possível enviar o e-mail agora. Tente novamente em instantes");
         }
@@ -289,7 +287,6 @@ public class AuthService {
     private static LocalDate lerData(String texto) {
         String data = texto.trim();
         try {
-            // Aceita "2000-05-20" e tambem "2000-05-20T00:00:00.000Z" (usa so os 10 primeiros).
             return LocalDate.parse(data.substring(0, Math.min(10, data.length())));
         } catch (DateTimeParseException e) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Data de nascimento inválida (use AAAA-MM-DD)");

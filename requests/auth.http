@@ -108,3 +108,67 @@ Content-Type: application/json
 
 ### Cancelar plano
 DELETE http://localhost:3000/user/planos/cancelar
+
+### ---------------- Etapa 3b: pets ----------------
+
+### Listar meus pets
+GET http://localhost:3000/user/listar/pet
+
+### Cadastrar pet (sem foto). Para enviar foto, acrescente a parte "image" com um arquivo
+POST http://localhost:3000/user/listar/pet/cadastar
+Content-Type: multipart/form-data; boundary=fronteira
+
+--fronteira
+Content-Disposition: form-data; name="nome"
+
+Rex
+--fronteira
+Content-Disposition: form-data; name="especie"
+
+cachorro
+--fronteira
+Content-Disposition: form-data; name="sexo"
+
+macho
+--fronteira
+Content-Disposition: form-data; name="data_nascimento"
+
+2020-05-20
+--fronteira
+Content-Disposition: form-data; name="idade"
+
+6
+--fronteira
+Content-Disposition: form-data; name="peso"
+
+12.5
+--fronteira--
+
+### Editar pet (troque o 1 pelo id_pet que apareceu na listagem)
+PUT http://localhost:3000/user/listar/pet/editar/1
+Content-Type: multipart/form-data; boundary=fronteira
+
+--fronteira
+Content-Disposition: form-data; name="nome"
+
+Rex Atualizado
+--fronteira
+Content-Disposition: form-data; name="especie"
+
+cachorro
+--fronteira
+Content-Disposition: form-data; name="sexo"
+
+m
+--fronteira
+Content-Disposition: form-data; name="data_nascimento"
+
+2020-05-20
+--fronteira
+Content-Disposition: form-data; name="peso"
+
+13
+--fronteira--
+
+### Excluir pet
+DELETE http://localhost:3000/user/listar/pet/delete/1

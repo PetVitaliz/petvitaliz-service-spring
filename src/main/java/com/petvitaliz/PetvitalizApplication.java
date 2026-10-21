@@ -4,7 +4,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
 
-// (nao existe usuario/senha em memoria).
 @SpringBootApplication(exclude = UserDetailsServiceAutoConfiguration.class)
 public class PetvitalizApplication {
 
