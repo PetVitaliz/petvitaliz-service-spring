@@ -53,6 +53,7 @@ public class PlanoService {
         assinatura.setProduto(produto);
         assinaturaRepository.save(assinatura);
 
+        // Se o e-mail falhar, a assinatura continua valida (comportamento do Express).
         try {
             emailService.enviarPlanoAssinado(
                     usuario.nome(), usuario.sobrenome(), usuario.email(),

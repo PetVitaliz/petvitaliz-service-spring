@@ -36,7 +36,6 @@ public class EmailService {
 
         enviarHtml("Suporte Petvitaliz", destinatario, "Reset de Senha - PetVitaliz", html, null);
     }
-
     public void enviarContato(String nome, String sobrenome, String emailConta,
                               String emailParaResposta, String mensagem) {
         String nomeCompleto = HtmlUtils.htmlEscape(nome + " " + sobrenome);
