@@ -8,7 +8,6 @@ import org.springframework.http.HttpStatus;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
-
 final class PetParser {
 
     private PetParser() {

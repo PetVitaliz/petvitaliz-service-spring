@@ -27,6 +27,7 @@ public class PlanoController {
     @GetMapping
     public Map<String, Object> planoAtual(@AuthenticationPrincipal UsuarioToken usuario) {
         return planoService.buscarPlanoAtual(usuario.id())
+                // A chave "include" e estranha, mas e a que o frontend ja le na API Express.
                 .<Map<String, Object>>map(plano -> Map.of("tem_plano", true, "include", plano))
                 .orElse(Map.of("mensagem", "Você ainda não possui nenhum plano ativo"));
     }

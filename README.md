@@ -13,9 +13,9 @@ Migracao da API `petvitaliz-service` (Express + Prisma) para Spring Boot 3.5 / J
 - [x] 2. Seguranca (JWT em cookie, login, reset de senha, CORS)
 - [x] 3a. Usuario: home, servicos, contato, perfil, planos
 - [x] 3b. Pets: listar, cadastrar, editar, excluir (upload Cloudinary)
-- [ ] 4. Agendamento e consultas
+- [x] 4. Agendamento e consultas do usuario
 - [ ] 5. Funcionario e administrador
-- [ ] 6. E-mails restantes (contato, plano), springdoc, Dockerfile
+- [ ] 6. springdoc, Dockerfile
 
 ## Testar
 Abra `requests/auth.http` no IntelliJ (HTTP Client) e rode as requisicoes de cima para baixo.

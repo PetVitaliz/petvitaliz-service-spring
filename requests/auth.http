@@ -172,3 +172,23 @@ Content-Disposition: form-data; name="peso"
 
 ### Excluir pet
 DELETE http://localhost:3000/user/listar/pet/delete/1
+
+### ---------------- Etapa 4: agendamento ----------------
+
+### Agendar consulta (use uma data futura e o id de um pet seu)
+POST http://localhost:3000/agendamento
+Content-Type: application/json
+
+{
+  "servico": "veterinario",
+  "id_pet": 1,
+  "data_consulta": "2026-12-10",
+  "hora_inicio": "09:00",
+  "observacoes": "Vacina anual"
+}
+
+### Minhas consultas
+GET http://localhost:3000/consultas
+
+### Cancelar agendamento (troque o 1 pelo id_consulta)
+DELETE http://localhost:3000/user/agendamento/cancelar/1

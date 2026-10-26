@@ -36,6 +36,7 @@ public class PetService {
     }
 
     public void cadastrar(Integer idUsuario, PetForm form, MultipartFile imagem) {
+        // Valida tudo primeiro: nao vale gastar um upload se o formulario esta errado.
         String nome = PetParser.nome(form.nome());
         Double peso = PetParser.pesoObrigatorio(form.peso());
         PetEspecie especie = PetParser.especie(form.especie());
@@ -86,6 +87,7 @@ public class PetService {
         pet.setOutraEspecie(outraEspecie);
         pet.setSexo(sexo);
         pet.setDataNascimento(nascimento);
+        // Idade nao enviada = mantem a atual (no Express virava NaN e dava erro 500).
         if (form.idade() != null && !form.idade().isBlank()) {
             pet.setIdade(PetParser.idadeOuZero(form.idade()));
         }
@@ -105,7 +107,7 @@ public class PetService {
 
         try {
             petRepository.delete(pet);
-            petRepository.flush();
+            petRepository.flush(); // forca o DELETE agora para pegar o erro de chave estrangeira aqui
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(HttpStatus.CONFLICT,
                     "Este pet possui consultas e não pode ser excluído");
