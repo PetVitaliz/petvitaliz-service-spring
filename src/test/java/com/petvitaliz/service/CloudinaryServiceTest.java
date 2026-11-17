@@ -13,32 +13,42 @@ class CloudinaryServiceTest {
     private final CloudinaryService service = new CloudinaryService("", "", "");
 
     @Test
-    void nomeSeguroRemoveExtensaoECaracteresPerigosos() {
-        assertThat(CloudinaryService.nomeSeguro("meu pet (1).jpg")).isEqualTo("meupet1");
-        assertThat(CloudinaryService.nomeSeguro("../../etc/passwd.png")).isEqualTo("pet");
-        assertThat(CloudinaryService.nomeSeguro(null)).isEqualTo("pet");
-        assertThat(CloudinaryService.nomeSeguro("***.png")).isEqualTo("pet");
-        assertThat(CloudinaryService.nomeSeguro("a".repeat(80) + ".png")).hasSize(50);
+    void safeNameDropsExtensionAndDangerousCharacters() {
+        assertThat(CloudinaryService.safeName("meu pet (1).jpg")).isEqualTo("meupet1");
+        assertThat(CloudinaryService.safeName("../../etc/passwd.png")).isEqualTo("pet");
+        assertThat(CloudinaryService.safeName(null)).isEqualTo("pet");
+        assertThat(CloudinaryService.safeName("***.png")).isEqualTo("pet");
+        assertThat(CloudinaryService.safeName("a".repeat(80) + ".png")).hasSize(50);
     }
 
     @Test
-    void aceitaJpegEPngPequenos() {
+    void acceptsSmallJpegAndPngFiles() {
         MockMultipartFile jpg = new MockMultipartFile("image", "a.jpg", "image/jpeg", new byte[10]);
         MockMultipartFile png = new MockMultipartFile("image", "a.png", "image/png", new byte[10]);
-        assertThatCode(() -> service.validar(jpg)).doesNotThrowAnyException();
-        assertThatCode(() -> service.validar(png)).doesNotThrowAnyException();
+
+        assertThatCode(() -> service.validate(jpg)).doesNotThrowAnyException();
+        assertThatCode(() -> service.validate(png)).doesNotThrowAnyException();
+        assertThatCode(() -> service.validate(null)).doesNotThrowAnyException();
     }
 
     @Test
-    void rejeitaTipoInvalido() {
+    void rejectsUnsupportedContentType() {
         MockMultipartFile pdf = new MockMultipartFile("image", "a.pdf", "application/pdf", new byte[10]);
-        assertThatThrownBy(() -> service.validar(pdf)).isInstanceOf(ApiException.class);
+
+        assertThatThrownBy(() -> service.validate(pdf)).isInstanceOf(ApiException.class);
     }
 
     @Test
-    void rejeitaArquivoMaiorQue4MB() {
-        MockMultipartFile grande = new MockMultipartFile("image", "a.jpg", "image/jpeg",
-                new byte[(int) CloudinaryService.TAMANHO_MAXIMO + 1]);
-        assertThatThrownBy(() -> service.validar(grande)).isInstanceOf(ApiException.class);
+    void rejectsFilesLargerThanFourMegabytes() {
+        MockMultipartFile large = new MockMultipartFile("image", "a.jpg", "image/jpeg",
+                new byte[(int) CloudinaryService.MAX_FILE_SIZE + 1]);
+
+        assertThatThrownBy(() -> service.validate(large)).isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void keepsTheCurrentUrlWhenNoFileIsSent() {
+        assertThat(service.uploadOrKeep(null, CloudinaryService.DEFAULT_FOLDER, "https://cdn/current.png"))
+                .isEqualTo("https://cdn/current.png");
     }
 }

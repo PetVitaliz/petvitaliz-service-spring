@@ -12,11 +12,18 @@ import java.util.Optional;
 
 public interface PetRepository extends JpaRepository<Pet, Integer> {
 
-    List<Pet> findByUsuarioId(Integer idUsuario);
+    List<Pet> findByOwnerId(Integer ownerId);
 
-    Optional<Pet> findByIdAndUsuarioId(Integer id, Integer idUsuario);
+    Optional<Pet> findByIdAndOwnerId(Integer id, Integer ownerId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select p from Pet p where p.id = :id and p.usuario.id = :idUsuario")
-    Optional<Pet> buscarDoUsuarioComTrava(@Param("id") Integer id, @Param("idUsuario") Integer idUsuario);
+    @Query("select p from Pet p where p.id = :id")
+    Optional<Pet> findByIdForUpdate(@Param("id") Integer id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Pet p where p.id = :id and p.owner.id = :ownerId")
+    Optional<Pet> findByIdAndOwnerIdForUpdate(@Param("id") Integer id, @Param("ownerId") Integer ownerId);
+
+    @Query("select p from Pet p join fetch p.owner order by p.name asc")
+    List<Pet> findAllWithOwner();
 }

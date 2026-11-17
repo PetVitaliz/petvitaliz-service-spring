@@ -11,7 +11,7 @@ import java.time.ZoneId;
 public class ClockConfig {
 
     @Bean
-    public Clock clock(@Value("${app.timezone:America/Sao_Paulo}") String zona) {
-        return Clock.system(ZoneId.of(zona));
+    public Clock clock(@Value("${app.timezone:America/Sao_Paulo}") String zone) {
+        return Clock.system(ZoneId.of(zone));
     }
 }

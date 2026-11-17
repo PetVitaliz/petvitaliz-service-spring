@@ -18,24 +18,24 @@ public class CookieService {
         this.sameSite = sameSite;
     }
 
-    public ResponseCookie criar(String nome, String valor, Duration duracao) {
-        return base(nome, valor).maxAge(duracao).build();
+    public String issue(TokenType type, String token) {
+        return header(type, token, type.getLifetime());
     }
 
-    public ResponseCookie limpar(String nome) {
-        return base(nome, "").maxAge(Duration.ZERO).build();
+    public String clear(TokenType type) {
+        return header(type, "", Duration.ZERO);
     }
 
-    public String comoCabecalho(ResponseCookie cookie, boolean particionado) {
-        String cabecalho = cookie.toString();
-        return (particionado && secure) ? cabecalho + "; Partitioned" : cabecalho;
-    }
-
-    private ResponseCookie.ResponseCookieBuilder base(String nome, String valor) {
-        return ResponseCookie.from(nome, valor)
+    private String header(TokenType type, String value, Duration maxAge) {
+        String cookie = ResponseCookie.from(type.getCookieName(), value)
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite(sameSite)
-                .path("/");
+                .path("/")
+                .maxAge(maxAge)
+                .build()
+                .toString();
+        boolean partitioned = secure && type == TokenType.PASSWORD_RESET;
+        return partitioned ? cookie + "; Partitioned" : cookie;
     }
 }

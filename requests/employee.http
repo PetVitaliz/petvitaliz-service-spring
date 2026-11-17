@@ -1,0 +1,50 @@
+### Login de funcionario (grava o cookie "token_funcionario")
+POST http://localhost:3000/user/login/funcionario
+Content-Type: application/json
+
+{
+  "email": "nome@petvitalizfuncionario.com",
+  "senha": "123456"
+}
+
+### Home: dados do funcionario e consultas de hoje
+GET http://localhost:3000/funcionario
+
+### Todas as consultas do funcionario
+GET http://localhost:3000/funcionario/consultas
+
+### Detalhes de uma consulta
+GET http://localhost:3000/funcionario/consultas/1
+
+### Atualizar status (em_andamento ou finalizado)
+PUT http://localhost:3000/funcionario/consultas/atualizar/1
+Content-Type: application/json
+
+{
+  "novoStatus": "em_andamento"
+}
+
+### Bater ponto (carga volta para 8)
+POST http://localhost:3000/funcionario/bater-ponto
+
+### Perfil
+GET http://localhost:3000/funcionario/perfil-dados
+
+### Atualizar perfil
+PUT http://localhost:3000/funcionario/perfil-dados/atualizar
+Content-Type: application/json
+
+{
+  "nome": "Ana",
+  "sobrenome": "Lima",
+  "email": "nome@petvitalizfuncionario.com"
+}
+
+### Clientes
+GET http://localhost:3000/funcionario/clientes
+
+### Pets
+GET http://localhost:3000/funcionario/pets
+
+### Logout
+GET http://localhost:3000/funcionario/logout
