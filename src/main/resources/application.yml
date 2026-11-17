@@ -42,6 +42,21 @@ app:
     same-site: ${COOKIE_SAMESITE:None}
   cors:
     frontend-url: ${FRONTEND_URL:}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    general-limit: ${RATE_LIMIT_GENERAL:300}
+    auth-limit: ${RATE_LIMIT_AUTH:20}
+    window: ${RATE_LIMIT_WINDOW:1m}
+    trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:0}
+  idempotency:
+    enabled: ${IDEMPOTENCY_ENABLED:true}
+    ttl: ${IDEMPOTENCY_TTL:24h}
+
+springdoc:
+  api-docs:
+    path: /docs-json
+  swagger-ui:
+    path: /docs
 
 server:
   port: ${PORT:3000}

@@ -11,35 +11,45 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class JwtService {
 
-    private final SecretKey chave;
+    private static final int MIN_SECRET_BYTES = 32;
 
-    public JwtService(@Value("${app.jwt.secret}") String segredo) {
-        byte[] bytes = segredo.getBytes(StandardCharsets.UTF_8);
-        if (bytes.length < 32) {
-            throw new IllegalStateException(
-                    "JWT_SECRET precisa ter pelo menos 32 caracteres (defina no .env ou nas variaveis do Render)");
+    private final SecretKey key;
+
+    public JwtService(@Value("${app.jwt.secret}") String secret) {
+        byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException("JWT_SECRET must have at least 32 characters");
         }
-        this.chave = Keys.hmacShaKeyFor(bytes);
+        this.key = Keys.hmacShaKeyFor(bytes);
     }
 
-    public String gerar(Map<String, Object> claims, Duration validade) {
-        Instant agora = Instant.now();
+    public String generate(TokenType type, Map<String, Object> claims) {
+        Map<String, Object> allClaims = new LinkedHashMap<>(claims);
+        allClaims.put(JwtClaims.ROLE, type.getRole());
+        allClaims.values().removeIf(Objects::isNull);
+        return generate(allClaims, type.getLifetime());
+    }
+
+    public String generate(Map<String, Object> claims, Duration lifetime) {
+        Instant now = Instant.now();
         return Jwts.builder()
                 .claims(claims)
-                .issuedAt(Date.from(agora))
-                .expiration(Date.from(agora.plus(validade)))
-                .signWith(chave, Jwts.SIG.HS256)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(lifetime)))
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }
 
-    public Claims validar(String token) {
+    public Claims parse(String token) {
         return Jwts.parser()
-                .verifyWith(chave)
+                .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

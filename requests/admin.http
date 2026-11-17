@@ -1,0 +1,117 @@
+### Login de administrador (grava o cookie "token_adm")
+POST http://localhost:3000/user/login/adm
+Content-Type: application/json
+
+{
+  "email": "admin@petvitaliz.com",
+  "senha": "123456"
+}
+
+### Home
+GET http://localhost:3000/adm
+
+### Consultas de hoje
+GET http://localhost:3000/adm/consultas
+
+### Clientes
+GET http://localhost:3000/adm/listar/clientes
+
+### Listar administradores
+GET http://localhost:3000/adm/listar/adm
+
+### Cadastrar administrador
+POST http://localhost:3000/adm/listar/adm/cadastrar
+Content-Type: application/json
+
+{
+  "username": "maria",
+  "email": "maria@petvitaliz.com",
+  "senha": "123456",
+  "ativo": true
+}
+
+### Editar administrador
+PUT http://localhost:3000/adm/listar/adm/editar/2
+Content-Type: application/json
+
+{
+  "username": "maria",
+  "email": "maria@petvitaliz.com",
+  "ativo": true
+}
+
+### Excluir administrador
+DELETE http://localhost:3000/adm/listar/adm/excluir/2
+
+### Listar funcionarios
+GET http://localhost:3000/adm/listar/funcionario
+
+### Cadastrar funcionario
+POST http://localhost:3000/adm/listar/funcionario/cadastrar
+Content-Type: application/json
+
+{
+  "nome": "Beto",
+  "sobrenome": "Souza",
+  "email": "beto@petvitalizfuncionario.com",
+  "especialidade": "tosador",
+  "ativo": true,
+  "senha": "123456"
+}
+
+### Editar funcionario
+PUT http://localhost:3000/adm/listar/funcionario/editar/1
+Content-Type: application/json
+
+{
+  "nome": "Beto",
+  "sobrenome": "Silva",
+  "email": "beto@petvitalizfuncionario.com",
+  "especialidade": "tosador",
+  "ativo": true
+}
+
+### Excluir funcionario
+DELETE http://localhost:3000/adm/listar/funcionario/excluir/1
+
+### Listar produtos (publica)
+GET http://localhost:3000/adm/listar/produtos
+
+### Cadastrar produto
+POST http://localhost:3000/adm/listar/produtos/cadastrar
+Content-Type: application/json
+
+{
+  "nome": "Plano Prata",
+  "descricao": "Plano basico",
+  "beneficios": "Banho mensal",
+  "preco": 29.9
+}
+
+### Editar produto
+PUT http://localhost:3000/adm/listar/produtos/editar/1
+Content-Type: application/json
+
+{
+  "nome": "Plano Prata",
+  "descricao": "Plano basico",
+  "beneficios": "Banho mensal",
+  "preco": 35
+}
+
+### Excluir produto
+DELETE http://localhost:3000/adm/listar/produtos/excluir/1
+
+### Upload de imagem
+POST http://localhost:3000/adm/upload
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="image"; filename="foto.png"
+Content-Type: image/png
+
+< ./foto.png
+--boundary--
+
+### Logout
+GET http://localhost:3000/adm/logout

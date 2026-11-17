@@ -13,49 +13,46 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtServiceTest {
 
-    private static final String SEGREDO = "uma-chave-de-teste-com-mais-de-32-caracteres";
-    private static final String OUTRO_SEGREDO = "outra-chave-de-teste-tambem-com-mais-de-32-chars";
+    private static final String SECRET = "a-test-key-with-more-than-32-characters";
+    private static final String OTHER_SECRET = "another-test-key-also-longer-than-32-chars";
 
     @Test
-    void geraEValidaToken() {
-        JwtService service = new JwtService(SEGREDO);
+    void generatesAndParsesToken() {
+        JwtService service = new JwtService(SECRET);
 
-        String token = service.gerar(Map.of("id", 7, "role", "USUARIO"), Duration.ofMinutes(5));
-        Claims claims = service.validar(token);
+        Claims claims = service.parse(service.generate(TokenType.ADMIN, Map.of(JwtClaims.ID, 7)));
 
-        assertThat(claims.get("id", Integer.class)).isEqualTo(7);
-        assertThat(claims.get("role", String.class)).isEqualTo("USUARIO");
+        assertThat(claims.get(JwtClaims.ID, Integer.class)).isEqualTo(7);
+        assertThat(claims.get(JwtClaims.ROLE, String.class)).isEqualTo("ADMIN");
     }
 
     @Test
-    void rejeitaTokenAssinadoComOutraChave() {
-        String token = new JwtService(SEGREDO).gerar(Map.of("id", 1), Duration.ofMinutes(5));
+    void rejectsTokenSignedWithAnotherKey() {
+        String token = new JwtService(SECRET).generate(Map.of(JwtClaims.ID, 1), Duration.ofMinutes(5));
 
-        assertThatThrownBy(() -> new JwtService(OUTRO_SEGREDO).validar(token))
-                .isInstanceOf(JwtException.class);
+        assertThatThrownBy(() -> new JwtService(OTHER_SECRET).parse(token)).isInstanceOf(JwtException.class);
     }
 
     @Test
-    void rejeitaTokenExpirado() {
-        JwtService service = new JwtService(SEGREDO);
-        String token = service.gerar(Map.of("id", 1), Duration.ofSeconds(-10));
+    void rejectsExpiredToken() {
+        JwtService service = new JwtService(SECRET);
+        String token = service.generate(Map.of(JwtClaims.ID, 1), Duration.ofSeconds(-10));
 
-        assertThatThrownBy(() -> service.validar(token))
-                .isInstanceOf(ExpiredJwtException.class);
+        assertThatThrownBy(() -> service.parse(token)).isInstanceOf(ExpiredJwtException.class);
     }
 
     @Test
-    void recusaSegredoCurto() {
-        assertThatThrownBy(() -> new JwtService("curta"))
-                .isInstanceOf(IllegalStateException.class);
+    void refusesShortSecret() {
+        assertThatThrownBy(() -> new JwtService("short")).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    void escolheOCookieCertoPeloCaminho() {
-        assertThat(TipoToken.paraCaminho("/adm/listar/funcionario")).isEqualTo(TipoToken.ADMINISTRADOR);
-        assertThat(TipoToken.paraCaminho("/funcionario/consultas")).isEqualTo(TipoToken.FUNCIONARIO);
-        assertThat(TipoToken.paraCaminho("/user/login/alterar-senha")).isEqualTo(TipoToken.RESET);
-        assertThat(TipoToken.paraCaminho("/user/listar/pet")).isEqualTo(TipoToken.USUARIO);
-        assertThat(TipoToken.paraCaminho("/agendamento")).isEqualTo(TipoToken.USUARIO);
+    void picksTheCookieByRequestPath() {
+        assertThat(TokenType.forPath("/adm/listar/funcionario")).isEqualTo(TokenType.ADMIN);
+        assertThat(TokenType.forPath("/adm")).isEqualTo(TokenType.ADMIN);
+        assertThat(TokenType.forPath("/funcionario/consultas")).isEqualTo(TokenType.EMPLOYEE);
+        assertThat(TokenType.forPath("/user/login/alterar-senha")).isEqualTo(TokenType.PASSWORD_RESET);
+        assertThat(TokenType.forPath("/user/listar/pet")).isEqualTo(TokenType.USER);
+        assertThat(TokenType.forPath("/administracao")).isEqualTo(TokenType.USER);
     }
 }

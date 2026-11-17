@@ -1,22 +1,26 @@
 package com.petvitaliz.service;
 
-import com.petvitaliz.dto.AlterarSenhaRequest;
-import com.petvitaliz.dto.CadastroRequest;
-import com.petvitaliz.dto.ConfirmarCodigoRequest;
 import com.petvitaliz.dto.LoginRequest;
-import com.petvitaliz.dto.LoginResultado;
-import com.petvitaliz.entity.Administrador;
-import com.petvitaliz.entity.Funcionario;
-import com.petvitaliz.entity.ResetSenha;
-import com.petvitaliz.entity.Usuario;
-import com.petvitaliz.enums.UsuarioGenero;
+import com.petvitaliz.dto.LoginResult;
+import com.petvitaliz.dto.NewPasswordRequest;
+import com.petvitaliz.dto.ResetCodeRequest;
+import com.petvitaliz.dto.SignupRequest;
+import com.petvitaliz.entity.Admin;
+import com.petvitaliz.entity.Employee;
+import com.petvitaliz.entity.PasswordReset;
+import com.petvitaliz.entity.User;
+import com.petvitaliz.enums.Gender;
 import com.petvitaliz.exception.ApiException;
-import com.petvitaliz.repository.AdministradorRepository;
-import com.petvitaliz.repository.FuncionarioRepository;
-import com.petvitaliz.repository.ResetSenhaRepository;
-import com.petvitaliz.repository.UsuarioRepository;
+import com.petvitaliz.repository.AdminRepository;
+import com.petvitaliz.repository.EmployeeRepository;
+import com.petvitaliz.repository.PasswordResetRepository;
+import com.petvitaliz.repository.UserRepository;
+import com.petvitaliz.security.JwtClaims;
 import com.petvitaliz.security.JwtService;
-import com.petvitaliz.security.TipoToken;
+import com.petvitaliz.security.TokenType;
+import com.petvitaliz.util.DateParser;
+import com.petvitaliz.util.Texts;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,273 +29,224 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
-    private static final int MAX_TENTATIVAS_CODIGO = 5;
+    private static final int MAX_CODE_ATTEMPTS = 5;
+    private static final int CODE_LIFETIME_MINUTES = 10;
+    private static final int CODE_RESEND_WAIT_MINUTES = 1;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private final UsuarioRepository usuarioRepository;
-    private final AdministradorRepository administradorRepository;
-    private final FuncionarioRepository funcionarioRepository;
-    private final ResetSenhaRepository resetSenhaRepository;
+    private final UserRepository userRepository;
+    private final AdminRepository adminRepository;
+    private final EmployeeRepository employeeRepository;
+    private final PasswordResetRepository passwordResetRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailService emailService;
-    private final Map<String, Integer> tentativasCodigo = new ConcurrentHashMap<>();
+    private final Map<String, Integer> codeAttempts = new ConcurrentHashMap<>();
 
-    public AuthService(UsuarioRepository usuarioRepository,
-                       AdministradorRepository administradorRepository,
-                       FuncionarioRepository funcionarioRepository,
-                       ResetSenhaRepository resetSenhaRepository,
-                       PasswordEncoder passwordEncoder,
-                       JwtService jwtService,
-                       EmailService emailService) {
-        this.usuarioRepository = usuarioRepository;
-        this.administradorRepository = administradorRepository;
-        this.funcionarioRepository = funcionarioRepository;
-        this.resetSenhaRepository = resetSenhaRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-        this.emailService = emailService;
+    public void signUp(SignupRequest request) {
+        String email = Texts.normalizeEmail(request.email());
+        String cpf = request.cpf().trim();
+        String phone = request.phone().trim();
+
+        if (userRepository.existsByEmail(email)) {
+            throw ApiException.badRequest("Email já cadastrado");
+        }
+        if (userRepository.existsByCpf(cpf)) {
+            throw ApiException.badRequest("CPF já cadastrado");
+        }
+        if (userRepository.existsByPhone(phone)) {
+            throw ApiException.badRequest("Número de telefone já cadastrado");
+        }
+
+        User user = new User();
+        user.setFirstName(request.firstName().trim());
+        user.setLastName(request.lastName().trim());
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(request.password()));
+        user.setCpf(cpf);
+        user.setPhone(phone);
+        user.setGender(Gender.valueOf(request.gender().trim().toUpperCase()));
+        user.setBirthDate(DateParser.parse(request.birthDate()).orElseThrow(() ->
+                ApiException.badRequest("Data de nascimento inválida (use AAAA-MM-DD)")));
+        userRepository.save(user);
     }
 
-    // cadastro
-
-    public void cadastrar(CadastroRequest req) {
-        String email = normalizar(req.email());
-        String cpf = req.cpf().trim();
-        String telefone = req.telefone().trim();
-
-        if (usuarioRepository.existsByEmail(email)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Email já cadastrado");
-        }
-        if (usuarioRepository.existsByCpf(cpf)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "CPF já cadastrado");
-        }
-        if (usuarioRepository.existsByTelefone(telefone)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Número de telefone já cadastrado");
-        }
-
-        Usuario usuario = new Usuario();
-        usuario.setNome(req.nome().trim());
-        usuario.setSobrenome(req.sobrenome().trim());
-        usuario.setEmail(email);
-        usuario.setSenha(passwordEncoder.encode(req.senha()));
-        usuario.setCpf(cpf);
-        usuario.setTelefone(telefone);
-        usuario.setGenero(UsuarioGenero.valueOf(req.genero().trim().toUpperCase()));
-        usuario.setDataNascimento(lerData(req.dataNascimento()));
-        usuarioRepository.save(usuario);
-    }
-
-    // logins
-
-    public LoginResultado loginUsuario(LoginRequest req) {
-        Usuario usuario = usuarioRepository.findByEmail(normalizar(req.email()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Email invalido"));
-
-        if (!passwordEncoder.matches(req.senha(), usuario.getSenha())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Senha invalida");
-        }
+    public LoginResult loginUser(LoginRequest request) {
+        User user = userRepository.findByEmail(Texts.normalizeEmail(request.email()))
+                .orElseThrow(AuthService::invalidEmail);
+        requirePassword(request.password(), user.getPassword());
 
         Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put("id", usuario.getId());
-        claims.put("email", usuario.getEmail());
-        claims.put("nome", usuario.getNome());
-        claims.put("sobrenome", usuario.getSobrenome());
+        claims.put(JwtClaims.ID, user.getId());
+        claims.put(JwtClaims.EMAIL, user.getEmail());
+        claims.put(JwtClaims.FIRST_NAME, user.getFirstName());
+        claims.put(JwtClaims.LAST_NAME, user.getLastName());
 
-        Map<String, Object> dadosUsuario = new LinkedHashMap<>();
-        dadosUsuario.put("nome", usuario.getNome() + " " + usuario.getSobrenome());
-        dadosUsuario.put("email", usuario.getEmail());
-        dadosUsuario.put("tipo", "usuario");
+        Map<String, Object> userData = new LinkedHashMap<>();
+        userData.put("nome", Texts.fullName(user.getFirstName(), user.getLastName()));
+        userData.put("email", user.getEmail());
+        userData.put("tipo", "usuario");
 
-        Map<String, Object> corpo = new LinkedHashMap<>();
-        corpo.put("mensagem", "Login realizado com sucesso");
-        corpo.put("usuario", dadosUsuario);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("mensagem", "Login realizado com sucesso");
+        body.put("usuario", userData);
 
-        return new LoginResultado(gerarToken(TipoToken.USUARIO, claims), corpo);
+        return new LoginResult(jwtService.generate(TokenType.USER, claims), body);
     }
 
-    public LoginResultado loginAdm(LoginRequest req) {
-        Administrador adm = administradorRepository.findByEmail(normalizar(req.email()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Email invalido"));
-
-        if (!passwordEncoder.matches(req.senha(), adm.getSenha())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Senha invalida");
-        }
-        if (!Boolean.TRUE.equals(adm.getAtivo())) {
+    public LoginResult loginAdmin(LoginRequest request) {
+        Admin admin = adminRepository.findByEmail(Texts.normalizeEmail(request.email()))
+                .orElseThrow(AuthService::invalidEmail);
+        requirePassword(request.password(), admin.getPassword());
+        if (!Boolean.TRUE.equals(admin.getActive())) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Usuário não está mais ativo");
         }
 
         Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put("id", adm.getId());
-        claims.put("email", adm.getEmail());
-        claims.put("nome", adm.getNome());
-        claims.put("ativo", adm.getAtivo());
-        claims.put("foto_url", adm.getFotoUrl());
+        claims.put(JwtClaims.ID, admin.getId());
+        claims.put(JwtClaims.EMAIL, admin.getEmail());
+        claims.put(JwtClaims.FIRST_NAME, admin.getUsername());
 
-        Map<String, Object> dadosUsuario = new LinkedHashMap<>();
-        dadosUsuario.put("id", adm.getId());
-        dadosUsuario.put("nome", adm.getNome());
-        dadosUsuario.put("email", adm.getEmail());
-        dadosUsuario.put("foto_url", adm.getFotoUrl());
-        dadosUsuario.put("tipo", "admin");
+        Map<String, Object> userData = new LinkedHashMap<>();
+        userData.put("id", admin.getId());
+        userData.put("nome", admin.getUsername());
+        userData.put("email", admin.getEmail());
+        userData.put("foto_url", admin.getPhotoUrl());
+        userData.put("tipo", "admin");
 
-        Map<String, Object> corpo = new LinkedHashMap<>();
-        corpo.put("mensagem", "Login como ADM realizado com sucesso");
-        corpo.put("usuario", dadosUsuario);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("mensagem", "Login como ADM realizado com sucesso");
+        body.put("usuario", userData);
 
-        return new LoginResultado(gerarToken(TipoToken.ADMINISTRADOR, claims), corpo);
+        return new LoginResult(jwtService.generate(TokenType.ADMIN, claims), body);
     }
 
-    public LoginResultado loginFuncionario(LoginRequest req) {
-        Funcionario funcionario = funcionarioRepository.findByEmail(normalizar(req.email()))
-                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Email invalido"));
-
-        if (!passwordEncoder.matches(req.senha(), funcionario.getSenha())) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Senha invalida");
-        }
-        if (!Boolean.TRUE.equals(funcionario.getAtivo())) {
+    public LoginResult loginEmployee(LoginRequest request) {
+        Employee employee = employeeRepository.findByEmail(Texts.normalizeEmail(request.email()))
+                .orElseThrow(AuthService::invalidEmail);
+        requirePassword(request.password(), employee.getPassword());
+        if (!Boolean.TRUE.equals(employee.getActive())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Esse usuario não esta mais ativo");
         }
 
         Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put("id", funcionario.getId());
-        claims.put("email", funcionario.getEmail());
-        claims.put("nome", funcionario.getNome());
-        claims.put("sobrenome", funcionario.getSobrenome());
-        claims.put("ativo", funcionario.getAtivo());
-        claims.put("especialidade", funcionario.getEspecialidade().name());
+        claims.put(JwtClaims.ID, employee.getId());
+        claims.put(JwtClaims.EMAIL, employee.getEmail());
+        claims.put(JwtClaims.FIRST_NAME, employee.getFirstName());
+        claims.put(JwtClaims.LAST_NAME, employee.getLastName());
 
-        Map<String, Object> corpo = new LinkedHashMap<>();
-        corpo.put("message", "Login realizado com sucesso");
-        corpo.put("nome", funcionario.getNome());
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", "Login realizado com sucesso");
+        body.put("nome", employee.getFirstName());
 
-        return new LoginResultado(gerarToken(TipoToken.FUNCIONARIO, claims), corpo);
+        return new LoginResult(jwtService.generate(TokenType.EMPLOYEE, claims), body);
     }
 
-    // reset de senha
-
     @Transactional
-    public void pedirResetSenha(String emailInformado) {
-        String email = normalizar(emailInformado);
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "email não encontrado"));
+    public void requestPasswordReset(String rawEmail) {
+        String email = Texts.normalizeEmail(rawEmail);
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> ApiException.notFound("email não encontrado"));
 
-        // O codigo vale 10 min; se o ultimo foi criado ha menos de 1 min, segura o novo pedido.
-        resetSenhaRepository.findFirstByUsuarioIdOrderByExpiraEmDesc(usuario.getId()).ifPresent(ultimo -> {
-            if (ultimo.getExpiraEm().isAfter(LocalDateTime.now().plusMinutes(9))) {
-                throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
-                        "Aguarde um minuto antes de pedir outro código");
-            }
-        });
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime resendThreshold = now.plusMinutes(CODE_LIFETIME_MINUTES - CODE_RESEND_WAIT_MINUTES);
+        passwordResetRepository.findFirstByUserIdOrderByExpiresAtDesc(user.getId())
+                .filter(latest -> latest.getExpiresAt().isAfter(resendThreshold))
+                .ifPresent(latest -> {
+                    throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
+                            "Aguarde um minuto antes de pedir outro código");
+                });
 
-        resetSenhaRepository.deleteByUsuarioId(usuario.getId());
+        passwordResetRepository.deleteByUserId(user.getId());
 
-        String codigo = String.format("%06d", RANDOM.nextInt(1_000_000));
-
-        ResetSenha reset = new ResetSenha();
-        reset.setUsuario(usuario);
-        reset.setToken(codigo);
-        reset.setExpiraEm(LocalDateTime.now().plusMinutes(10));
-        resetSenhaRepository.save(reset);
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        PasswordReset reset = new PasswordReset();
+        reset.setUser(user);
+        reset.setCode(code);
+        reset.setExpiresAt(now.plusMinutes(CODE_LIFETIME_MINUTES));
+        passwordResetRepository.save(reset);
 
         try {
-            emailService.enviarCodigoReset(usuario.getNome(), usuario.getSobrenome(), email, codigo);
+            emailService.sendPasswordResetCode(Texts.fullName(user.getFirstName(), user.getLastName()), email, code);
         } catch (RuntimeException e) {
-            // A ApiException desfaz a transacao: o codigo que nao foi entregue nao fica salvo.
             throw new ApiException(HttpStatus.BAD_GATEWAY,
                     "Não foi possível enviar o e-mail agora. Tente novamente em instantes");
         }
 
-        tentativasCodigo.remove(email);
+        codeAttempts.remove(email);
     }
 
     @Transactional
-    public LoginResultado confirmarCodigo(ConfirmarCodigoRequest req) {
-        String email = normalizar(req.email());
+    public LoginResult confirmResetCode(ResetCodeRequest request) {
+        String email = Texts.normalizeEmail(request.email());
+        User user = userRepository.findByEmail(email).orElseThrow(AuthService::invalidCode);
 
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Codigo invalido"));
-
-        if (tentativasCodigo.getOrDefault(email, 0) >= MAX_TENTATIVAS_CODIGO) {
-            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS,
-                    "Muitas tentativas. Peça um novo código");
+        if (codeAttempts.getOrDefault(email, 0) >= MAX_CODE_ATTEMPTS) {
+            throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "Muitas tentativas. Peça um novo código");
         }
 
-        ResetSenha reset = resetSenhaRepository.findFirstByUsuarioIdOrderByExpiraEmDesc(usuario.getId())
-                .filter(r -> r.getExpiraEm().isAfter(LocalDateTime.now()))
-                .filter(r -> codigosIguais(r.getToken(), req.codigo().trim()))
+        PasswordReset reset = passwordResetRepository.findFirstByUserIdOrderByExpiresAtDesc(user.getId())
+                .filter(latest -> latest.getExpiresAt().isAfter(LocalDateTime.now()))
+                .filter(latest -> sameCode(latest.getCode(), request.code().trim()))
                 .orElse(null);
 
         if (reset == null) {
-            tentativasCodigo.merge(email, 1, Integer::sum);
-            throw new ApiException(HttpStatus.NOT_FOUND, "Codigo invalido");
+            codeAttempts.merge(email, 1, Integer::sum);
+            throw invalidCode();
         }
 
-        resetSenhaRepository.delete(reset);
-        tentativasCodigo.remove(email);
+        passwordResetRepository.delete(reset);
+        codeAttempts.remove(email);
 
         Map<String, Object> claims = new LinkedHashMap<>();
-        claims.put("id", usuario.getId());
-        claims.put("reset_autorizado", true);
-        String token = gerarToken(TipoToken.RESET, claims);
+        claims.put(JwtClaims.ID, user.getId());
+        claims.put(JwtClaims.RESET_AUTHORIZED, true);
+        String token = jwtService.generate(TokenType.PASSWORD_RESET, claims);
 
-        Map<String, Object> corpo = new LinkedHashMap<>();
-        corpo.put("mensagem", "Acesso liberado");
-        corpo.put("token_reset", token);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("mensagem", "Acesso liberado");
+        body.put("token_reset", token);
 
-        return new LoginResultado(token, corpo);
+        return new LoginResult(token, body);
     }
 
     @Transactional
-    public void alterarSenha(Integer idUsuario, AlterarSenhaRequest req) {
-        if (!req.senha1().equals(req.senha2())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "As senhas não estão iguais");
+    public void changePassword(Integer userId, NewPasswordRequest request) {
+        if (!request.password().equals(request.confirmation())) {
+            throw ApiException.badRequest("As senhas não estão iguais");
         }
 
-        Usuario usuario = usuarioRepository.findById(idUsuario)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
-
-        usuario.setSenha(passwordEncoder.encode(req.senha1()));
-        usuarioRepository.save(usuario);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> ApiException.notFound("Usuário não encontrado"));
+        user.setPassword(passwordEncoder.encode(request.password()));
     }
 
-    // --------------------------------------------------------------- helpers
-
-    private String gerarToken(TipoToken tipo, Map<String, Object> claims) {
-        Map<String, Object> todos = new LinkedHashMap<>(claims);
-        todos.put("role", tipo.getRole());
-        todos.values().removeIf(Objects::isNull);
-        return jwtService.gerar(todos, tipo.getValidade());
+    private void requirePassword(String rawPassword, String hash) {
+        if (!passwordEncoder.matches(rawPassword, hash)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "Senha invalida");
+        }
     }
 
-    private static String normalizar(String email) {
-        return email.trim().toLowerCase();
+    private static ApiException invalidEmail() {
+        return new ApiException(HttpStatus.UNAUTHORIZED, "Email invalido");
     }
 
-    private static boolean codigosIguais(String esperado, String informado) {
+    private static ApiException invalidCode() {
+        return ApiException.notFound("Codigo invalido");
+    }
+
+    private static boolean sameCode(String expected, String provided) {
         return MessageDigest.isEqual(
-                esperado.getBytes(StandardCharsets.UTF_8),
-                informado.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static LocalDate lerData(String texto) {
-        String data = texto.trim();
-        try {
-            // Aceita "2000-05-20" e tambem "2000-05-20T00:00:00.000Z" (usa so os 10 primeiros).
-            return LocalDate.parse(data.substring(0, Math.min(10, data.length())));
-        } catch (DateTimeParseException e) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Data de nascimento inválida (use AAAA-MM-DD)");
-        }
+                expected.getBytes(StandardCharsets.UTF_8),
+                provided.getBytes(StandardCharsets.UTF_8));
     }
 }

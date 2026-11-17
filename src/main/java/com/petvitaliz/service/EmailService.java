@@ -15,56 +15,55 @@ import java.util.Locale;
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
-    private final String remetente;
+    private static final Locale BRAZIL = Locale.of("pt", "BR");
 
-    public EmailService(JavaMailSender mailSender, @Value("${spring.mail.username}") String remetente) {
+    private final JavaMailSender mailSender;
+    private final String senderAddress;
+
+    public EmailService(JavaMailSender mailSender, @Value("${spring.mail.username}") String senderAddress) {
         this.mailSender = mailSender;
-        this.remetente = remetente;
+        this.senderAddress = senderAddress;
     }
 
-    public void enviarCodigoReset(String nome, String sobrenome, String destinatario, String codigo) {
+    public void sendPasswordResetCode(String fullName, String recipient, String code) {
         String html = """
-                Olá <strong>%s %s</strong>,<br><br>
+                Olá <strong>%s</strong>,<br><br>
                 Você solicitou uma redefinição de senha.<br><br>
                 Copie o código abaixo e cole no site:<br><br>
                 <h3>%s</h3><br><br>
                 Este código expira em 10 minutos.<br><br>
                 <strong>Caso essa solicitação não seja sua, ignore este e-mail.<br><br>
                 Atenciosamente,<br>Equipe de Suporte PetVitaliz</strong>
-                """.formatted(HtmlUtils.htmlEscape(nome), HtmlUtils.htmlEscape(sobrenome), codigo);
+                """.formatted(HtmlUtils.htmlEscape(fullName), code);
 
-        enviarHtml("Suporte Petvitaliz", destinatario, "Reset de Senha - PetVitaliz", html, null);
+        send("Suporte Petvitaliz", recipient, "Reset de Senha - PetVitaliz", html, null);
     }
-    public void enviarContato(String nome, String sobrenome, String emailConta,
-                              String emailParaResposta, String mensagem) {
-        String nomeCompleto = HtmlUtils.htmlEscape(nome + " " + sobrenome);
 
-        String confirmacao = """
+    public void sendContact(String fullName, String accountEmail, String replyEmail, String message) {
+        String escapedName = HtmlUtils.htmlEscape(fullName);
+
+        String confirmation = """
                 Olá <strong>%s</strong>,<br><br>
                 Obrigado por entrar em contato! Sua mensagem foi recebida com sucesso.<br>
                 Nossa equipe responderá em breve. 🐾<br><br>
                 <strong>Atenciosamente,<br>Equipe PetVitaliz</strong>
-                """.formatted(nomeCompleto);
+                """.formatted(escapedName);
 
-        String aviso = """
+        String notice = """
                 <h2>Novo contato recebido:</h2>
                 <p><strong>Nome:</strong> %s</p>
                 <p><strong>E-mail para resposta:</strong> %s</p>
                 <p><strong>Mensagem:</strong><br>%s</p>
                 """.formatted(
-                nomeCompleto,
-                HtmlUtils.htmlEscape(emailParaResposta),
-                HtmlUtils.htmlEscape(mensagem).replace("\n", "<br>"));
+                escapedName,
+                HtmlUtils.htmlEscape(replyEmail),
+                HtmlUtils.htmlEscape(message).replace("\n", "<br>"));
 
-        enviarHtml("Equipe Petvitaliz", emailConta, "Recebemos sua mensagem - PetVitaliz", confirmacao, null);
-        enviarHtml("Contato Petvitaliz", remetente, "Novo Contato: " + nome + " " + sobrenome, aviso, emailParaResposta);
+        send("Equipe Petvitaliz", accountEmail, "Recebemos sua mensagem - PetVitaliz", confirmation, null);
+        send("Contato Petvitaliz", senderAddress, "Novo Contato: " + fullName, notice, replyEmail);
     }
 
-    public void enviarPlanoAssinado(String nome, String sobrenome, String destinatario,
-                                    String nomePlano, BigDecimal preco) {
-        String valor = String.format(Locale.of("pt", "BR"), "%,.2f", preco);
-
+    public void sendSubscriptionConfirmed(String fullName, String recipient, String planName, BigDecimal price) {
         String html = """
                 <h2>Olá, <strong>%s</strong>!</h2>
                 <p>Estamos muito felizes em informar que a contratação do seu plano foi processada com sucesso.</p>
@@ -79,25 +78,28 @@ public class EmailService {
                 <p>A partir de agora, os benefícios já estão vinculados à sua conta. Se precisar de qualquer ajuda ou quiser agendar procedimentos, acesse seu painel.</p>
                 <br>
                 <p><strong>Atenciosamente,</strong><br>Equipe Financeira PetVitaliz</p>
-                """.formatted(HtmlUtils.htmlEscape(nome + " " + sobrenome), HtmlUtils.htmlEscape(nomePlano), valor);
+                """.formatted(
+                HtmlUtils.htmlEscape(fullName),
+                HtmlUtils.htmlEscape(planName),
+                String.format(BRAZIL, "%,.2f", price));
 
-        enviarHtml("Financeiro Petvitaliz", destinatario, "Sua assinatura foi confirmada!", html, null);
+        send("Financeiro Petvitaliz", recipient, "Sua assinatura foi confirmada!", html, null);
     }
 
-    private void enviarHtml(String nomeRemetente, String para, String assunto, String html, String responderPara) {
+    private void send(String senderName, String recipient, String subject, String html, String replyTo) {
         try {
-            MimeMessage mensagem = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mensagem, "UTF-8");
-            helper.setFrom(remetente, nomeRemetente);
-            helper.setTo(para);
-            helper.setSubject(assunto);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+            helper.setFrom(senderAddress, senderName);
+            helper.setTo(recipient);
+            helper.setSubject(subject);
             helper.setText(html, true);
-            if (responderPara != null && !responderPara.isBlank()) {
-                helper.setReplyTo(responderPara);
+            if (replyTo != null && !replyTo.isBlank()) {
+                helper.setReplyTo(replyTo);
             }
-            mailSender.send(mensagem);
+            mailSender.send(message);
         } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new IllegalStateException("Falha ao montar o e-mail", e);
+            throw new IllegalStateException("Failed to build e-mail", e);
         }
     }
 }

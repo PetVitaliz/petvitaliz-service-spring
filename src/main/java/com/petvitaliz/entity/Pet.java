@@ -1,8 +1,18 @@
 package com.petvitaliz.entity;
 
-import com.petvitaliz.enums.PetEspecie;
-import com.petvitaliz.enums.PetSexo;
-import jakarta.persistence.*;
+import com.petvitaliz.enums.PetSex;
+import com.petvitaliz.enums.PetSpecies;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -23,33 +33,36 @@ public class Pet {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_usuario", nullable = false)
-    private Usuario usuario;
+    private User owner;
 
-    @Column(nullable = false, length = 500)
-    private String nome;
+    @Column(name = "id_usuario", insertable = false, updatable = false)
+    private Integer ownerId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PetEspecie especie;
+    @Column(name = "nome", nullable = false, length = 500)
+    private String name;
+
+    @Column(name = "especie", nullable = false)
+    private PetSpecies species;
 
     @Column(name = "outra_especie", length = 100)
-    private String outraEspecie;
+    private String otherSpecies;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private PetSexo sexo;
+    @Column(name = "sexo", nullable = false)
+    private PetSex sex;
 
     @Column(name = "data_nascimento", nullable = false)
-    private LocalDate dataNascimento;
+    private LocalDate birthDate;
 
     @Column(name = "foto_url", length = 1000)
-    private String fotoUrl;
+    private String photoUrl;
 
-    @Column(nullable = false)
-    private Integer idade;
+    @Column(name = "idade", nullable = false)
+    private Integer age;
 
-    private Double peso;
+    @Column(name = "peso")
+    private Double weight;
 
-    @Column(length = 1000)
-    private String observacoes;
+    @Column(name = "observacoes", length = 1000)
+    private String notes;
 }

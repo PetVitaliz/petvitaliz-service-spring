@@ -1,7 +1,9 @@
 package com.petvitaliz.security;
 
+import com.petvitaliz.web.JsonResponseWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
@@ -15,14 +17,14 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request,
                          HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        TipoToken tipo = TipoToken.paraCaminho(request.getRequestURI());
-        boolean tokenInvalido = Boolean.TRUE.equals(
-                request.getAttribute(JwtAuthenticationFilter.ATRIBUTO_TOKEN_INVALIDO));
+        TokenType type = TokenType.forPath(request.getRequestURI());
+        boolean invalidToken = Boolean.TRUE.equals(
+                request.getAttribute(JwtAuthenticationFilter.INVALID_TOKEN_ATTRIBUTE));
 
-        if (tokenInvalido) {
-            RespostaJson.escrever(response, HttpServletResponse.SC_FORBIDDEN, tipo.getMensagemSessaoExpirada());
+        if (invalidToken) {
+            JsonResponseWriter.write(response, HttpStatus.FORBIDDEN, type.getExpiredMessage());
         } else {
-            RespostaJson.escrever(response, HttpServletResponse.SC_UNAUTHORIZED, tipo.getMensagemNaoAutenticado());
+            JsonResponseWriter.write(response, HttpStatus.UNAUTHORIZED, type.getUnauthenticatedMessage());
         }
     }
 }
