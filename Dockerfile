@@ -10,6 +10,6 @@ WORKDIR /app
 RUN useradd --system --no-create-home petvitaliz
 COPY --from=build /app/target/*.jar app.jar
 USER petvitaliz
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=60 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xss512k"
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -XX:TieredStopAtLevel=1 -XX:+ExitOnOutOfMemoryError -Dspring.main.lazy-initialization=true"
 EXPOSE 3000
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
