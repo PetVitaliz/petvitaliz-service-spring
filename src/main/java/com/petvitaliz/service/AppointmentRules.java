@@ -12,6 +12,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -20,6 +22,7 @@ final class AppointmentRules {
     static final Duration FINISH_TOLERANCE = Duration.ofMinutes(10);
 
     private static final Duration LENGTH = Duration.ofHours(1);
+    private static final Duration SLOT_STEP = Duration.ofMinutes(30);
     private static final int MAX_NOTES_LENGTH = 500;
     private static final Set<EmployeeSpecialty> BOOKABLE =
             Set.of(EmployeeSpecialty.GROOMER, EmployeeSpecialty.VETERINARIAN);
@@ -43,6 +46,16 @@ final class AppointmentRules {
         return TimeParser.parse(text)
                 .map(TimeParser::format)
                 .orElseThrow(() -> ApiException.badRequest("Hora de início inválida (use HH:mm)"));
+    }
+
+    static List<String> slotsOfDay() {
+        List<String> slots = new ArrayList<>();
+        for (LocalTime time = LocalTime.MIDNIGHT; ; time = time.plus(SLOT_STEP)) {
+            slots.add(TimeParser.format(time));
+            if (time.plus(SLOT_STEP).equals(LocalTime.MIDNIGHT)) {
+                return slots;
+            }
+        }
     }
 
     static String endTime(String startTime) {

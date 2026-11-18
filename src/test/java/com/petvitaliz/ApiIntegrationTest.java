@@ -495,6 +495,62 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void availabilityMarksATimeUnavailableOnlyWhenEveryProfessionalIsBusy() throws Exception {
+        deactivateAllEmployees();
+        createEmployee(EmployeeSpecialty.VETERINARIAN);
+        createEmployee(EmployeeSpecialty.VETERINARIAN);
+        createEmployee(EmployeeSpecialty.GROOMER);
+        Cookie user = loginNewUser();
+        int firstPet = createPet(user);
+        Cookie otherUser = loginNewUser();
+        int secondPet = createPet(otherUser);
+        String date = "2026-07-10";
+        String path = "/agendamento/horarios?servico=veterinario&data=" + date;
+
+        mockMvc.perform(get(path).cookie(user))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.profissionais").value(2))
+                .andExpect(jsonPath("$.indisponiveis", hasSize(0)));
+
+        mockMvc.perform(postJson("/agendamento", appointmentBody("veterinario", firstPet, date, "08:00")).cookie(user))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get(path).cookie(user)).andExpect(jsonPath("$.indisponiveis", hasSize(0)));
+
+        mockMvc.perform(postJson("/agendamento", appointmentBody("veterinario", secondPet, date, "08:00"))
+                        .cookie(otherUser))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get(path).cookie(user))
+                .andExpect(jsonPath("$.indisponiveis", hasSize(3)))
+                .andExpect(jsonPath("$.indisponiveis[0]").value("07:30"))
+                .andExpect(jsonPath("$.indisponiveis[1]").value("08:00"))
+                .andExpect(jsonPath("$.indisponiveis[2]").value("08:30"));
+        mockMvc.perform(get("/adm/agendamento/horarios?servico=veterinario&data=" + date).cookie(loginNewAdmin()))
+                .andExpect(jsonPath("$.indisponiveis[1]").value("08:00"));
+        int thirdPet = createPet(loginNewUser());
+        Cookie admin = loginNewAdmin();
+        mockMvc.perform(postJson("/adm/agendamento", appointmentBody("veterinario", thirdPet, date, "08:30")).cookie(admin))
+                .andExpect(status().isConflict());
+        mockMvc.perform(postJson("/adm/agendamento", appointmentBody("veterinario", thirdPet, date, "09:00")).cookie(admin))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/agendamento/horarios?servico=tosador&data=" + date).cookie(user))
+                .andExpect(jsonPath("$.servico").value("tosador"))
+                .andExpect(jsonPath("$.profissionais").value(1))
+                .andExpect(jsonPath("$.indisponiveis", hasSize(0)));
+        mockMvc.perform(get("/agendamento/horarios?servico=financeiro&data=" + date).cookie(user))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
+        deactivateAllEmployees();
+    }
+
+    private void deactivateAllEmployees() {
+        employeeRepository.findAll().forEach(employee -> {
+            employee.setActive(false);
+            employeeRepository.save(employee);
+        });
+    }
+
+    @Test
     void adminCancelsAllSubscriptionsSoThePlanCanBeDeleted() throws Exception {
         Product plan = new Product();
         plan.setName("Plano Prata");

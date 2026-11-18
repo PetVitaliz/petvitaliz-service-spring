@@ -107,6 +107,7 @@ Erros seguem o formato `{"mensagem": "..."}`. Uma requisição sem login devolve
 | POST | `/user/planos/pagamento` | Assina um plano |
 | DELETE | `/user/planos/cancelar` | Cancela o plano |
 | POST | `/agendamento` | Agenda consulta |
+| GET | `/agendamento/horarios?servico=veterinario&data=AAAA-MM-DD` | Horários sem profissional livre no dia |
 | GET | `/consultas` | Lista as consultas |
 | DELETE | `/user/agendamento/cancelar/{id}` | Cancela consulta |
 
@@ -132,6 +133,7 @@ Erros seguem o formato `{"mensagem": "..."}`. Uma requisição sem login devolve
 | PUT | `/adm/consultas/atualizar/{id}` | Muda o status de uma consulta |
 | DELETE | `/adm/consultas/cancelar/{id}` | Cancela uma consulta |
 | POST | `/adm/agendamento` | Agenda consulta para um cliente |
+| GET | `/adm/agendamento/horarios?servico=...&data=...` | Horários sem profissional livre no dia |
 | GET | `/adm/listar/clientes` | Clientes e pets |
 | DELETE | `/adm/listar/clientes/excluir/{petId}` | Exclui um pet |
 | POST | `/adm/upload` | Envia imagem ao Cloudinary |
@@ -149,6 +151,8 @@ Exemplos prontos para o HTTP Client do IntelliJ estão em `requests/user.http`, 
 - Cada consulta dura 1 hora, e não é possível agendar em horário que já passou (fuso `America/Sao_Paulo`).
 - O pet precisa pertencer ao usuário e não pode ter outra consulta no mesmo horário.
 - O profissional é sorteado entre os livres naquele horário. Cada um atende até 8 consultas por dia.
+- Um profissional fica ocupado durante toda a consulta, então uma consulta às 8:00 também bloqueia 7:30 e 8:30 para ele.
+- `GET /agendamento/horarios` devolve `profissionais` (quantos podem atender) e `indisponiveis` (horários, de 30 em 30 minutos, em que todos estão ocupados).
 - Uma consulta só pode ser iniciada a partir do horário marcado e finalizada até 10 minutos depois do fim.
 - Consultas finalizadas não podem ser canceladas. Ao cancelar, a carga do profissional é devolvida.
 

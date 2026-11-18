@@ -4,6 +4,7 @@ import com.petvitaliz.dto.AdminClientResponse;
 import com.petvitaliz.dto.AppointmentRequest;
 import com.petvitaliz.dto.AppointmentResponse;
 import com.petvitaliz.dto.AppointmentStatusRequest;
+import com.petvitaliz.dto.AvailabilityResponse;
 import com.petvitaliz.dto.MessageResponse;
 import com.petvitaliz.exception.ApiException;
 import com.petvitaliz.security.CookieService;
@@ -69,6 +70,12 @@ public class AdminController {
     public MessageResponse cancelAppointment(@PathVariable Integer id) {
         appointmentService.cancelAsAdmin(id);
         return new MessageResponse("Agendamento cancelado com sucesso.");
+    }
+
+    @GetMapping("/agendamento/horarios")
+    public AvailabilityResponse availability(@RequestParam(name = "servico", required = false) String service,
+                                             @RequestParam(name = "data", required = false) String date) {
+        return appointmentService.availability(service, date);
     }
 
     @PostMapping("/agendamento")

@@ -3,6 +3,7 @@ package com.petvitaliz.service;
 import com.petvitaliz.dto.AppointmentRequest;
 import com.petvitaliz.dto.AppointmentResponse;
 import com.petvitaliz.dto.AppointmentStatusRequest;
+import com.petvitaliz.dto.AvailabilityResponse;
 import com.petvitaliz.entity.Appointment;
 import com.petvitaliz.entity.Employee;
 import com.petvitaliz.entity.Pet;
@@ -12,6 +13,7 @@ import com.petvitaliz.exception.ApiException;
 import com.petvitaliz.repository.AppointmentRepository;
 import com.petvitaliz.repository.EmployeeRepository;
 import com.petvitaliz.repository.PetRepository;
+import com.petvitaliz.util.TimeParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -78,6 +80,39 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
+    public AvailabilityResponse availability(String service, String dateText) {
+        EmployeeSpecialty specialty = AppointmentRules.service(service);
+        LocalDate date = AppointmentRules.date(dateText);
+        List<Integer> candidateIds = availableEmployeeIds(specialty);
+
+        List<String> unavailable = List.of();
+        if (!candidateIds.isEmpty()) {
+            List<Object[]> schedules = appointmentRepository.findSchedulesOfDay(date, candidateIds);
+            unavailable = AppointmentRules.slotsOfDay().stream()
+                    .filter(slot -> busyEmployees(schedules, slot, AppointmentRules.endTime(slot)) >= candidateIds.size())
+                    .toList();
+        }
+
+        return new AvailabilityResponse(date.toString(), specialty.getDbValue(), candidateIds.size(), unavailable);
+    }
+
+    private static long busyEmployees(List<Object[]> schedules, String startTime, String endTime) {
+        return schedules.stream()
+                .filter(row -> overlaps(normalize((String) row[1]), normalize((String) row[2]), startTime, endTime))
+                .map(row -> row[0])
+                .distinct()
+                .count();
+    }
+
+    private static boolean overlaps(String busyStart, String busyEnd, String startTime, String endTime) {
+        return busyStart.compareTo(endTime) < 0 && busyEnd.compareTo(startTime) > 0;
+    }
+
+    private static String normalize(String time) {
+        return TimeParser.parse(time).map(TimeParser::format).orElse(time == null ? "" : time);
+    }
+
+    @Transactional(readOnly = true)
     public List<AppointmentResponse> list(Integer ownerId) {
         List<AppointmentResponse> appointments = appointmentRepository.findAllByOwner(ownerId).stream()
                 .map(AppointmentResponse::forOwner)
@@ -119,16 +154,14 @@ public class AppointmentService {
     }
 
     private Employee reserveEmployee(EmployeeSpecialty specialty, LocalDate date, String startTime) {
-        List<Integer> candidateIds = employeeRepository
-                .findBySpecialtyAndActiveTrueAndWorkloadGreaterThan(specialty, 0).stream()
-                .map(Employee::getId)
-                .toList();
+        List<Integer> candidateIds = availableEmployeeIds(specialty);
         if (candidateIds.isEmpty()) {
             throw ApiException.notFound(NO_PROFESSIONAL);
         }
 
+        String endTime = AppointmentRules.endTime(startTime);
         Set<Integer> busyIds = new HashSet<>(
-                appointmentRepository.findBusyEmployeeIds(date, startTime, candidateIds));
+                appointmentRepository.findBusyEmployeeIds(date, startTime, endTime, candidateIds));
         List<Integer> freeIds = candidateIds.stream().filter(id -> !busyIds.contains(id)).toList();
         if (freeIds.isEmpty()) {
             throw ApiException.conflict(SLOT_TAKEN);
@@ -138,12 +171,18 @@ public class AppointmentService {
         Employee employee = employeeRepository.findByIdForUpdate(chosenId)
                 .orElseThrow(() -> ApiException.notFound(NO_PROFESSIONAL));
 
-        if (appointmentRepository.existsByEmployeeIdAndAppointmentDateAndStartTime(chosenId, date, startTime)) {
+        if (!appointmentRepository.findBusyEmployeeIds(date, startTime, endTime, List.of(chosenId)).isEmpty()) {
             throw ApiException.conflict(SLOT_TAKEN);
         }
         if (employeeRepository.reserveWorkload(chosenId) == 0) {
             throw ApiException.notFound(NO_PROFESSIONAL);
         }
         return employee;
+    }
+
+    private List<Integer> availableEmployeeIds(EmployeeSpecialty specialty) {
+        return employeeRepository.findBySpecialtyAndActiveTrueAndWorkloadGreaterThan(specialty, 0).stream()
+                .map(Employee::getId)
+                .toList();
     }
 }

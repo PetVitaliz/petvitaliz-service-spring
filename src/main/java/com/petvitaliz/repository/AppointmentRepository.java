@@ -37,15 +37,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
             + "where a.appointmentDate = :date order by a.startTime asc")
     List<Appointment> findAllByDate(@Param("date") LocalDate date);
 
-    boolean existsByEmployeeIdAndAppointmentDateAndStartTime(
-            Integer employeeId, LocalDate appointmentDate, String startTime);
-
     boolean existsByPetIdAndAppointmentDateAndStartTimeAndStatusNot(
             Integer petId, LocalDate appointmentDate, String startTime, AppointmentStatus status);
 
+    @Query("select a.employee.id, a.startTime, a.endTime from Appointment a "
+            + "where a.appointmentDate = :date and a.employee.id in :employeeIds")
+    List<Object[]> findSchedulesOfDay(@Param("date") LocalDate date,
+                                      @Param("employeeIds") Collection<Integer> employeeIds);
+
     @Query("select distinct a.employee.id from Appointment a "
-            + "where a.appointmentDate = :date and a.startTime = :startTime and a.employee.id in :employeeIds")
+            + "where a.appointmentDate = :date and a.employee.id in :employeeIds "
+            + "and a.startTime < :endTime and a.endTime > :startTime")
     List<Integer> findBusyEmployeeIds(@Param("date") LocalDate date,
                                       @Param("startTime") String startTime,
+                                      @Param("endTime") String endTime,
                                       @Param("employeeIds") Collection<Integer> employeeIds);
 }
