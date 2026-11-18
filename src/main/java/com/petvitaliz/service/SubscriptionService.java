@@ -57,4 +57,9 @@ public class SubscriptionService {
                 .orElseThrow(() -> ApiException.notFound("Você não possui nenhum plano para ser cancelado"));
         subscriptionRepository.delete(subscription);
     }
+
+    @Transactional
+    public int cancelAll() {
+        return subscriptionRepository.deleteAllSubscriptions();
+    }
 }

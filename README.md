@@ -138,6 +138,7 @@ Erros seguem o formato `{"mensagem": "..."}`. Uma requisição sem login devolve
 | GET, POST, PUT, DELETE | `/adm/listar/adm[/cadastrar, /{id}, /editar/{id}, /excluir/{id}]` | CRUD de administradores |
 | GET, POST, PUT, DELETE | `/adm/listar/funcionario[/cadastrar, /{id}, /editar/{id}, /excluir/{id}]` | CRUD de funcionários |
 | GET, POST, PUT, DELETE | `/adm/listar/produtos[/cadastrar, /{id}, /editar/{id}, /excluir/{id}]` | CRUD de planos |
+| DELETE | `/adm/listar/produtos/assinaturas/cancelar` | Cancela todos os planos contratados (libera a exclusão de planos) |
 | GET/POST | `/adm/logout` | Encerra a sessão |
 
 Exemplos prontos para o HTTP Client do IntelliJ estão em `requests/user.http`, `requests/employee.http` e `requests/admin.http`.

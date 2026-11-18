@@ -495,6 +495,33 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void adminCancelsAllSubscriptionsSoThePlanCanBeDeleted() throws Exception {
+        Product plan = new Product();
+        plan.setName("Plano Prata");
+        plan.setDescription("Plano intermediario");
+        plan.setBenefits("Banho e Tosa: 1x/mês");
+        plan.setPrice(new BigDecimal("219.90"));
+        productRepository.save(plan);
+        Map<String, Object> request = Map.of("id_produto", plan.getId());
+        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
+        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
+        Cookie admin = loginNewAdmin();
+
+        mockMvc.perform(delete("/adm/listar/produtos/assinaturas/cancelar").cookie(loginNewUser()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/adm/listar/produtos/excluir/" + plan.getId()).cookie(admin))
+                .andExpect(status().isConflict());
+        mockMvc.perform(delete("/adm/listar/produtos/assinaturas/cancelar").cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canceladas").value(2))
+                .andExpect(jsonPath("$.mensagem").value("2 planos contratados foram cancelados"));
+        mockMvc.perform(delete("/adm/listar/produtos/assinaturas/cancelar").cookie(admin))
+                .andExpect(jsonPath("$.canceladas").value(0));
+        mockMvc.perform(delete("/adm/listar/produtos/excluir/" + plan.getId()).cookie(admin))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void mobileClientAuthenticatesWithTheBearerToken() throws Exception {
         String email = signUp();
         Map<String, Object> credentials = Map.of("email", email, "senha", PASSWORD);

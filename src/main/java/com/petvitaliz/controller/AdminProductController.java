@@ -3,6 +3,7 @@ package com.petvitaliz.controller;
 import com.petvitaliz.dto.ProductRequest;
 import com.petvitaliz.dto.ProductResponse;
 import com.petvitaliz.service.ProductService;
+import com.petvitaliz.service.SubscriptionService;
 import com.petvitaliz.web.JsonText;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,7 @@ import java.util.Map;
 public class AdminProductController {
 
     private final ProductService productService;
+    private final SubscriptionService subscriptionService;
 
     @PostMapping("/cadastrar")
     public ResponseEntity<String> create(@RequestBody ProductRequest request) {
@@ -49,6 +51,17 @@ public class AdminProductController {
         body.put("mensagem", "Produto atualizado com sucesso");
         body.put("novo_Produto", productService.update(id, request));
         return ResponseEntity.status(HttpStatus.CREATED).body(body);
+    }
+
+    @DeleteMapping("/assinaturas/cancelar")
+    public Map<String, Object> cancelAllSubscriptions() {
+        int canceled = subscriptionService.cancelAll();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("mensagem", canceled == 0
+                ? "Nenhum plano contratado para cancelar"
+                : canceled + (canceled == 1 ? " plano contratado foi cancelado" : " planos contratados foram cancelados"));
+        body.put("canceladas", canceled);
+        return body;
     }
 
     @DeleteMapping("/excluir/{id}")
