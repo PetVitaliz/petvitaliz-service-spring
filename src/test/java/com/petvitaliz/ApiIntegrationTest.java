@@ -521,6 +521,31 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void webClientCreatesPetsWithTheBearerTokenWhenCookiesAreBlocked() throws Exception {
+        String email = signUp();
+        MvcResult login = mockMvc.perform(postJson("/user/login", Map.of("email", email, "senha", PASSWORD))
+                        .header(AuthController.CLIENT_TYPE_HEADER, "web"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andReturn();
+        String bearer = "Bearer " + objectMapper.readTree(login.getResponse().getContentAsString()).get("token").asText();
+
+        mockMvc.perform(multipart("/user/listar/pet/cadastar")
+                        .param("nome", "Thor")
+                        .param("especie", "gato")
+                        .param("sexo", "M")
+                        .param("data_nascimento", "2021-03-10")
+                        .param("peso", "4")
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/user/listar/pet").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pets[0].nome").value("Thor"));
+        mockMvc.perform(get("/adm/listar/produtos").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void adminSchedulesUpdatesAndCancelsAnyAppointment() throws Exception {
         Employee groomer = createEmployee(EmployeeSpecialty.GROOMER);
         groomer.setSpecialty(EmployeeSpecialty.RECEPTIONIST);

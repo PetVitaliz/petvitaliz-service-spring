@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/user")
@@ -35,7 +36,7 @@ public class AuthController {
 
     public static final String CLIENT_TYPE_HEADER = "X-Client-Type";
 
-    private static final String MOBILE_CLIENT = "mobile";
+    private static final Set<String> TOKEN_CLIENTS = Set.of("mobile", "web");
 
     private final AuthService authService;
     private final CookieService cookieService;
@@ -94,7 +95,7 @@ public class AuthController {
 
     private ResponseEntity<Map<String, Object>> withCookie(TokenType type, LoginResult result, String clientType) {
         Map<String, Object> body = new LinkedHashMap<>(result.body());
-        if (MOBILE_CLIENT.equalsIgnoreCase(clientType)) {
+        if (clientType != null && TOKEN_CLIENTS.contains(clientType.trim().toLowerCase())) {
             body.put("token", result.token());
         }
         return ResponseEntity.ok()
