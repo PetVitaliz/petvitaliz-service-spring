@@ -551,6 +551,46 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void employeeSeesThePetPlanAndSchedulesForTheClient() throws Exception {
+        deactivateAllEmployees();
+        Employee veterinarian = createEmployee(EmployeeSpecialty.VETERINARIAN);
+        Product plan = new Product();
+        plan.setName("Plano Ouro | OURO | 349.90");
+        plan.setDescription("Plano completo");
+        plan.setBenefits("Banho e Tosa: 2x/mês");
+        plan.setPrice(new BigDecimal("399.90"));
+        productRepository.save(plan);
+        Cookie owner = loginNewUser();
+        int petId = createPet(owner);
+        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", plan.getId())).cookie(owner))
+                .andExpect(status().isOk());
+        Cookie employee = login("/user/login/funcionario", veterinarian.getEmail());
+        String petPath = "$.pets[?(@.id_pet == " + petId + ")]";
+
+        mockMvc.perform(get("/funcionario/pets").cookie(employee))
+                .andExpect(jsonPath(petPath + ".plano", hasItem("Plano Ouro | OURO | 349.90")))
+                .andExpect(jsonPath(petPath + ".consultasDoMes[*]", hasSize(0)));
+        mockMvc.perform(get("/funcionario/clientes").cookie(employee))
+                .andExpect(jsonPath("$.clientes[*].petsDetalhesLista[?(@.id_pet == " + petId + ")].plano",
+                        hasItem("Plano Ouro | OURO | 349.90")));
+
+        String date = TODAY.toString();
+        Map<String, Object> body = new LinkedHashMap<>(appointmentBody("veterinario", petId, date, "18:00"));
+        body.put("tipo_servico", "consulta");
+        body.put("observacoes", "Serviço: Consulta.");
+        mockMvc.perform(postJson("/funcionario/agendamento", body).cookie(employee))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/funcionario/agendamento/horarios?servico=veterinario&data=" + date).cookie(employee))
+                .andExpect(jsonPath("$.indisponiveis", hasItem("18:00")));
+        mockMvc.perform(get("/funcionario/pets").cookie(employee))
+                .andExpect(jsonPath(petPath + ".consultasDoMes[*].servico", hasItem("veterinario")))
+                .andExpect(jsonPath(petPath + ".consultasDoMes[*].observacoes", hasItem("Serviço: Consulta.")));
+        mockMvc.perform(postJson("/funcionario/agendamento", body).cookie(owner))
+                .andExpect(status().isUnauthorized());
+        deactivateAllEmployees();
+    }
+
+    @Test
     void adminCancelsAllSubscriptionsSoThePlanCanBeDeleted() throws Exception {
         Product plan = new Product();
         plan.setName("Plano Prata");
@@ -559,9 +599,10 @@ class ApiIntegrationTest {
         plan.setPrice(new BigDecimal("219.90"));
         productRepository.save(plan);
         Map<String, Object> request = Map.of("id_produto", plan.getId());
-        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
-        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
         Cookie admin = loginNewAdmin();
+        mockMvc.perform(delete("/adm/listar/produtos/assinaturas/cancelar").cookie(admin)).andExpect(status().isOk());
+        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
+        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
 
         mockMvc.perform(delete("/adm/listar/produtos/assinaturas/cancelar").cookie(loginNewUser()))
                 .andExpect(status().isUnauthorized());

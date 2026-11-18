@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -81,7 +82,7 @@ class ResponseMappingTest {
 
     @Test
     void patientShowsFriendlyLabels() {
-        PatientResponse patient = PatientResponse.of(pet(), TODAY);
+        PatientResponse patient = PatientResponse.of(pet(), TODAY, null, List.of());
 
         assertThat(patient.species()).isEqualTo("Cão");
         assertThat(patient.sex()).isEqualTo("Macho");

@@ -6,6 +6,7 @@ import com.petvitaliz.util.Texts;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.List;
 
 public record PatientResponse(
         @JsonProperty("id_pet") Integer id,
@@ -19,13 +20,16 @@ public record PatientResponse(
         @JsonProperty("peso") String weight,
         String status,
         @JsonProperty("tutor") String ownerName,
-        @JsonProperty("prontuario") String record
+        @JsonProperty("prontuario") String record,
+        @JsonProperty("plano") String plan,
+        @JsonProperty("consultasDoMes") List<MonthAppointmentResponse> monthAppointments
 ) {
 
     private static final String NO_NOTES =
             "Nenhuma observação clínica registrada para o paciente até o momento.";
 
-    public static PatientResponse of(Pet pet, LocalDate today) {
+    public static PatientResponse of(Pet pet, LocalDate today, String plan,
+                                     List<MonthAppointmentResponse> monthAppointments) {
         Double weight = pet.getWeight();
         boolean weighed = weight != null && weight > 0;
         String notes = pet.getNotes();
@@ -42,7 +46,9 @@ public record PatientResponse(
                 weighed ? Texts.plainNumber(weight) + " kg" : "Não pesado",
                 weighed ? "Ativo" : "Em Tratamento",
                 Texts.fullName(pet.getOwner().getFirstName(), pet.getOwner().getLastName()),
-                notes == null || notes.isBlank() ? NO_NOTES : notes);
+                notes == null || notes.isBlank() ? NO_NOTES : notes,
+                plan,
+                monthAppointments);
     }
 
     static String ageText(Integer storedAge, LocalDate birthDate, LocalDate today) {

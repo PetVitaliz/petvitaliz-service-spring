@@ -40,6 +40,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     boolean existsByPetIdAndAppointmentDateAndStartTimeAndStatusNot(
             Integer petId, LocalDate appointmentDate, String startTime, AppointmentStatus status);
 
+    @Query("select a from Appointment a join fetch a.employee "
+            + "where a.appointmentDate between :start and :end")
+    List<Appointment> findAllBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
     @Query("select a.employee.id, a.startTime, a.endTime from Appointment a "
             + "where a.appointmentDate = :date and a.employee.id in :employeeIds")
     List<Object[]> findSchedulesOfDay(@Param("date") LocalDate date,

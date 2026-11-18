@@ -1,7 +1,9 @@
 package com.petvitaliz.controller;
 
+import com.petvitaliz.dto.AppointmentRequest;
 import com.petvitaliz.dto.AppointmentResponse;
 import com.petvitaliz.dto.AppointmentStatusRequest;
+import com.petvitaliz.dto.AvailabilityResponse;
 import com.petvitaliz.dto.ClientResponse;
 import com.petvitaliz.dto.EmployeeHomeResponse;
 import com.petvitaliz.dto.EmployeeProfileRequest;
@@ -11,8 +13,11 @@ import com.petvitaliz.dto.PatientResponse;
 import com.petvitaliz.security.AuthenticatedUser;
 import com.petvitaliz.security.CookieService;
 import com.petvitaliz.security.TokenType;
+import com.petvitaliz.service.AppointmentService;
 import com.petvitaliz.service.EmployeeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +27,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
@@ -34,6 +40,7 @@ import java.util.Map;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final AppointmentService appointmentService;
     private final CookieService cookieService;
 
     @GetMapping
@@ -83,6 +90,18 @@ public class EmployeeController {
         body.put("mensagem", "Perfil atualizado com sucesso");
         body.put("funcionario", employeeService.updateProfile(employee.id(), request));
         return body;
+    }
+
+    @GetMapping("/agendamento/horarios")
+    public AvailabilityResponse availability(@RequestParam(name = "servico", required = false) String service,
+                                             @RequestParam(name = "data", required = false) String date) {
+        return appointmentService.availability(service, date);
+    }
+
+    @PostMapping("/agendamento")
+    public ResponseEntity<MessageResponse> schedule(@Valid @RequestBody AppointmentRequest request) {
+        appointmentService.scheduleAsAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new MessageResponse("Consulta agendada com sucesso"));
     }
 
     @GetMapping("/clientes")

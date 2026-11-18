@@ -20,28 +20,33 @@ public record ClientResponse(
         @JsonProperty("petsLista") List<String> petNames,
         @JsonProperty("petsDetalhesLista") List<PetDetails> petDetails,
         String status,
-        @JsonProperty("ultimaVisita") String lastVisit
+        @JsonProperty("ultimaVisita") String lastVisit,
+        @JsonProperty("plano") String plan
 ) {
 
     public record PetDetails(
+            @JsonProperty("id_pet") Integer id,
             @JsonProperty("nome") String name,
             @JsonProperty("especie") PetSpecies species,
             @JsonProperty("sexo") PetSex sex,
             @JsonProperty("peso") Double weight,
-            @JsonProperty("data_nascimento") String birthDate
+            @JsonProperty("data_nascimento") String birthDate,
+            @JsonProperty("plano") String plan
     ) {
 
-        static PetDetails of(Pet pet) {
+        static PetDetails of(Pet pet, String plan) {
             return new PetDetails(
+                    pet.getId(),
                     pet.getName(),
                     pet.getSpecies(),
                     pet.getSex(),
                     pet.getWeight(),
-                    DateParser.toIsoMidnight(pet.getBirthDate()));
+                    DateParser.toIsoMidnight(pet.getBirthDate()),
+                    plan);
         }
     }
 
-    public static ClientResponse of(User user) {
+    public static ClientResponse of(User user, String plan) {
         List<Pet> pets = user.getPets();
         return new ClientResponse(
                 user.getId(),
@@ -51,9 +56,10 @@ public record ClientResponse(
                 user.getEmail(),
                 String.format("%02d", pets.size()),
                 pets.stream().map(Pet::getName).toList(),
-                pets.stream().map(PetDetails::of).toList(),
+                pets.stream().map(pet -> PetDetails.of(pet, plan)).toList(),
                 "ATIVO",
-                "Consultar histórico");
+                "Consultar histórico",
+                plan);
     }
 
     static String maskCpf(String cpf) {

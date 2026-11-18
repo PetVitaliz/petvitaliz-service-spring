@@ -8,6 +8,7 @@ import com.petvitaliz.dto.EmployeeProfileRequest;
 import com.petvitaliz.dto.EmployeeProfileResponse;
 import com.petvitaliz.dto.EmployeeResponse;
 import com.petvitaliz.dto.EmployeeSummaryResponse;
+import com.petvitaliz.dto.MonthAppointmentResponse;
 import com.petvitaliz.dto.PatientResponse;
 import com.petvitaliz.entity.Appointment;
 import com.petvitaliz.entity.Employee;
@@ -16,6 +17,7 @@ import com.petvitaliz.exception.ApiException;
 import com.petvitaliz.repository.AppointmentRepository;
 import com.petvitaliz.repository.EmployeeRepository;
 import com.petvitaliz.repository.PetRepository;
+import com.petvitaliz.repository.SubscriptionRepository;
 import com.petvitaliz.repository.UserRepository;
 import com.petvitaliz.util.Texts;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,8 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +39,7 @@ public class EmployeeService {
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
     private final PetRepository petRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -105,15 +110,31 @@ public class EmployeeService {
 
     @Transactional(readOnly = true)
     public List<ClientResponse> listClients() {
-        return userRepository.findAllWithPets().stream().map(ClientResponse::of).toList();
+        Map<Integer, String> plans = plansByOwner();
+        return userRepository.findAllWithPets().stream()
+                .map(user -> ClientResponse.of(user, plans.get(user.getId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public List<PatientResponse> listPatients() {
         LocalDate today = LocalDate.now(clock);
+        Map<Integer, String> plans = plansByOwner();
+        Map<Integer, List<MonthAppointmentResponse>> monthAppointments = appointmentRepository
+                .findAllBetween(today.withDayOfMonth(1), today.withDayOfMonth(today.lengthOfMonth())).stream()
+                .map(MonthAppointmentResponse::of)
+                .collect(Collectors.groupingBy(MonthAppointmentResponse::petId));
         return petRepository.findAllWithOwner().stream()
-                .map(pet -> PatientResponse.of(pet, today))
+                .map(pet -> PatientResponse.of(pet, today, plans.get(pet.getOwnerId()),
+                        monthAppointments.getOrDefault(pet.getId(), List.of())))
                 .toList();
+    }
+
+    private Map<Integer, String> plansByOwner() {
+        return subscriptionRepository.findAllWithProduct().stream()
+                .collect(Collectors.toMap(subscription -> subscription.getUserId(),
+                        subscription -> subscription.getProduct().getName(),
+                        (first, second) -> first));
     }
 
     private Employee find(Integer employeeId) {
