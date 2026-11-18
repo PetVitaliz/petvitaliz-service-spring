@@ -14,12 +14,13 @@ public record AdminClientResponse(
         @JsonProperty("telefone") String phone,
         @JsonProperty("especie") String species,
         String status,
-        @JsonProperty("observacoes") String notes
+        @JsonProperty("observacoes") String notes,
+        @JsonProperty("plano") String plan
 ) {
 
     private static final String NO_NOTES = "Nenhuma observação clínica registrada.";
 
-    public static AdminClientResponse of(Pet pet) {
+    public static AdminClientResponse of(Pet pet, String plan) {
         User owner = pet.getOwner();
         String notes = pet.getNotes();
         boolean hasNotes = notes != null && !notes.isBlank();
@@ -35,6 +36,7 @@ public record AdminClientResponse(
                 owner.getPhone(),
                 pet.getSpecies().getDisplayName(),
                 inTreatment ? "Em tratamento" : "Ativo",
-                hasNotes ? notes : NO_NOTES);
+                hasNotes ? notes : NO_NOTES,
+                plan);
     }
 }

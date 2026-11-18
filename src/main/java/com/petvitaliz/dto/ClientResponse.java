@@ -9,6 +9,7 @@ import com.petvitaliz.util.DateParser;
 import com.petvitaliz.util.Texts;
 
 import java.util.List;
+import java.util.Map;
 
 public record ClientResponse(
         @JsonProperty("id_usuario") Integer id,
@@ -20,8 +21,7 @@ public record ClientResponse(
         @JsonProperty("petsLista") List<String> petNames,
         @JsonProperty("petsDetalhesLista") List<PetDetails> petDetails,
         String status,
-        @JsonProperty("ultimaVisita") String lastVisit,
-        @JsonProperty("plano") String plan
+        @JsonProperty("ultimaVisita") String lastVisit
 ) {
 
     public record PetDetails(
@@ -46,7 +46,7 @@ public record ClientResponse(
         }
     }
 
-    public static ClientResponse of(User user, String plan) {
+    public static ClientResponse of(User user, Map<Integer, String> plansByPet) {
         List<Pet> pets = user.getPets();
         return new ClientResponse(
                 user.getId(),
@@ -56,10 +56,9 @@ public record ClientResponse(
                 user.getEmail(),
                 String.format("%02d", pets.size()),
                 pets.stream().map(Pet::getName).toList(),
-                pets.stream().map(pet -> PetDetails.of(pet, plan)).toList(),
+                pets.stream().map(pet -> PetDetails.of(pet, plansByPet.get(pet.getId()))).toList(),
                 "ATIVO",
-                "Consultar histórico",
-                plan);
+                "Consultar histórico");
     }
 
     static String maskCpf(String cpf) {

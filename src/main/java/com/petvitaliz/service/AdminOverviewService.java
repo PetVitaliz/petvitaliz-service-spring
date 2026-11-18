@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +19,7 @@ public class AdminOverviewService {
 
     private final AppointmentRepository appointmentRepository;
     private final PetRepository petRepository;
+    private final SubscriptionService subscriptionService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -29,6 +31,9 @@ public class AdminOverviewService {
 
     @Transactional(readOnly = true)
     public List<AdminClientResponse> listClients() {
-        return petRepository.findAllWithOwner().stream().map(AdminClientResponse::of).toList();
+        Map<Integer, String> plans = subscriptionService.planNamesByPet();
+        return petRepository.findAllWithOwner().stream()
+                .map(pet -> AdminClientResponse.of(pet, plans.get(pet.getId())))
+                .toList();
     }
 }

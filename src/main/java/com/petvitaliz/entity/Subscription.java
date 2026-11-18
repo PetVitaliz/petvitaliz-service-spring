@@ -31,6 +31,9 @@ public class Subscription {
     @Column(name = "id_usuario", nullable = false)
     private Integer userId;
 
+    @Column(name = "id_pet", nullable = false, unique = true)
+    private Integer petId;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_produto", nullable = false)
     private Product product;

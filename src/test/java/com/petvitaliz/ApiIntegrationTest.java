@@ -51,6 +51,7 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
@@ -471,27 +472,54 @@ class ApiIntegrationTest {
     }
 
     @Test
-    void subscriptionCanBeCreatedOnceAndCancelled() throws Exception {
-        Product plan = new Product();
-        plan.setName("Plano Ouro");
-        plan.setDescription("Plano completo");
-        plan.setBenefits("Consultas ilimitadas");
-        plan.setPrice(new BigDecimal("49.90"));
-        productRepository.save(plan);
+    void eachPetHasItsOwnPlan() throws Exception {
+        Product gold = new Product();
+        gold.setName("Plano Ouro");
+        gold.setDescription("Plano completo");
+        gold.setBenefits("Consultas ilimitadas");
+        gold.setPrice(new BigDecimal("49.90"));
+        productRepository.save(gold);
+        Product bronze = new Product();
+        bronze.setName("Plano Bronze");
+        bronze.setDescription("Plano inicial");
+        bronze.setBenefits("Banho e Tosa: 1x/mês");
+        bronze.setPrice(new BigDecimal("19.90"));
+        productRepository.save(bronze);
         Cookie user = loginNewUser();
-        Map<String, Object> request = Map.of("id_produto", plan.getId());
+        int rex = createPet(user);
+        int luna = createPet(user);
+        int someoneElsesPet = createPet(loginNewUser());
 
         mockMvc.perform(get("/user/planos").cookie(user))
                 .andExpect(jsonPath("$.mensagem").value("Você ainda não possui nenhum plano ativo"));
-        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(user)).andExpect(status().isOk());
-        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(user)).andExpect(status().isBadRequest());
+        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", gold.getId())).cookie(user))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.mensagem").value("Escolha o pet que vai receber o plano"));
+        mockMvc.perform(postJson("/user/planos/pagamento",
+                        Map.of("id_produto", gold.getId(), "id_pet", someoneElsesPet)).cookie(user))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", gold.getId(), "id_pet", rex)).cookie(user))
+                .andExpect(status().isOk());
+        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", bronze.getId(), "id_pet", rex)).cookie(user))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", bronze.getId(), "id_pet", luna)).cookie(user))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get("/user/planos").cookie(user))
                 .andExpect(jsonPath("$.tem_plano").value(true))
-                .andExpect(jsonPath("$.include.preco").value("49.9"));
-        mockMvc.perform(delete("/adm/listar/produtos/excluir/" + plan.getId()).cookie(loginNewAdmin()))
+                .andExpect(jsonPath("$.planos", hasSize(2)))
+                .andExpect(jsonPath("$.planos[?(@.id_pet == " + rex + ")].produto.nome", hasItem("Plano Ouro")))
+                .andExpect(jsonPath("$.planos[?(@.id_pet == " + luna + ")].produto.nome", hasItem("Plano Bronze")));
+        mockMvc.perform(get("/user/planos?id_pet=" + luna).cookie(user))
+                .andExpect(jsonPath("$.include.preco").value("19.9"));
+        mockMvc.perform(delete("/adm/listar/produtos/excluir/" + gold.getId()).cookie(loginNewAdmin()))
                 .andExpect(status().isConflict());
-        mockMvc.perform(delete("/user/planos/cancelar").cookie(user)).andExpect(status().isOk());
-        mockMvc.perform(delete("/user/planos/cancelar").cookie(user)).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/user/planos/cancelar").cookie(user)).andExpect(status().isBadRequest());
+        mockMvc.perform(delete("/user/planos/cancelar/" + rex).cookie(user)).andExpect(status().isOk());
+        mockMvc.perform(delete("/user/planos/cancelar/" + rex).cookie(user)).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/user/listar/pet/delete/" + luna).cookie(user)).andExpect(status().isOk());
+        mockMvc.perform(get("/user/planos").cookie(user))
+                .andExpect(jsonPath("$.planos", hasSize(0)));
     }
 
     @Test
@@ -543,6 +571,13 @@ class ApiIntegrationTest {
         deactivateAllEmployees();
     }
 
+    private void subscribeNewPet(Product plan) throws Exception {
+        Cookie user = loginNewUser();
+        int petId = createPet(user);
+        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", plan.getId(), "id_pet", petId)).cookie(user))
+                .andExpect(status().isOk());
+    }
+
     private void deactivateAllEmployees() {
         employeeRepository.findAll().forEach(employee -> {
             employee.setActive(false);
@@ -562,7 +597,8 @@ class ApiIntegrationTest {
         productRepository.save(plan);
         Cookie owner = loginNewUser();
         int petId = createPet(owner);
-        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", plan.getId())).cookie(owner))
+        int otherPet = createPet(owner);
+        mockMvc.perform(postJson("/user/planos/pagamento", Map.of("id_produto", plan.getId(), "id_pet", petId)).cookie(owner))
                 .andExpect(status().isOk());
         Cookie employee = login("/user/login/funcionario", veterinarian.getEmail());
         String petPath = "$.pets[?(@.id_pet == " + petId + ")]";
@@ -570,8 +606,14 @@ class ApiIntegrationTest {
         mockMvc.perform(get("/funcionario/pets").cookie(employee))
                 .andExpect(jsonPath(petPath + ".plano", hasItem("Plano Ouro | OURO | 349.90")))
                 .andExpect(jsonPath(petPath + ".consultasDoMes[*]", hasSize(0)));
+        mockMvc.perform(get("/funcionario/pets").cookie(employee))
+                .andExpect(jsonPath("$.pets[?(@.id_pet == " + otherPet + ")].plano", hasItem(nullValue())));
         mockMvc.perform(get("/funcionario/clientes").cookie(employee))
                 .andExpect(jsonPath("$.clientes[*].petsDetalhesLista[?(@.id_pet == " + petId + ")].plano",
+                        hasItem("Plano Ouro | OURO | 349.90")));
+
+        mockMvc.perform(get("/adm/listar/clientes").cookie(loginNewAdmin()))
+                .andExpect(jsonPath("$.clientes[?(@.id_pet == " + petId + ")].plano",
                         hasItem("Plano Ouro | OURO | 349.90")));
 
         String date = TODAY.toString();
@@ -598,11 +640,10 @@ class ApiIntegrationTest {
         plan.setBenefits("Banho e Tosa: 1x/mês");
         plan.setPrice(new BigDecimal("219.90"));
         productRepository.save(plan);
-        Map<String, Object> request = Map.of("id_produto", plan.getId());
         Cookie admin = loginNewAdmin();
         mockMvc.perform(delete("/adm/listar/produtos/assinaturas/cancelar").cookie(admin)).andExpect(status().isOk());
-        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
-        mockMvc.perform(postJson("/user/planos/pagamento", request).cookie(loginNewUser())).andExpect(status().isOk());
+        subscribeNewPet(plan);
+        subscribeNewPet(plan);
 
         mockMvc.perform(delete("/adm/listar/produtos/assinaturas/cancelar").cookie(loginNewUser()))
                 .andExpect(status().isUnauthorized());
@@ -781,7 +822,11 @@ class ApiIntegrationTest {
         mockMvc.perform(postJson("/user/listar/pet/cadastar", pet).cookie(user)).andExpect(status().isCreated());
 
         MvcResult list = mockMvc.perform(get("/user/listar/pet").cookie(user)).andReturn();
-        return objectMapper.readTree(list.getResponse().getContentAsString()).at("/pets/0/id_pet").asInt();
+        int newest = 0;
+        for (var item : objectMapper.readTree(list.getResponse().getContentAsString()).at("/pets")) {
+            newest = Math.max(newest, item.get("id_pet").asInt());
+        }
+        return newest;
     }
 
     private static Map<String, Object> appointmentBody(String service, int petId, String date, String startTime) {

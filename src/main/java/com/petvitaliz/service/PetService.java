@@ -6,6 +6,7 @@ import com.petvitaliz.entity.Pet;
 import com.petvitaliz.enums.PetSpecies;
 import com.petvitaliz.exception.ApiException;
 import com.petvitaliz.repository.PetRepository;
+import com.petvitaliz.repository.SubscriptionRepository;
 import com.petvitaliz.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.List;
 public class PetService {
 
     private final PetRepository petRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final Clock clock;
@@ -67,6 +69,7 @@ public class PetService {
 
     private void remove(Pet pet) {
         PersistenceGuard.deleteOrConflict(() -> {
+            subscriptionRepository.deleteByPetId(pet.getId());
             petRepository.delete(pet);
             petRepository.flush();
         }, "Este pet possui consultas e não pode ser excluído");

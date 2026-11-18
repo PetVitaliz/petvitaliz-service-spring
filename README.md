@@ -103,9 +103,9 @@ Erros seguem o formato `{"mensagem": "..."}`. Uma requisição sem login devolve
 | POST | `/user/listar/pet/cadastar` | Cadastra pet (JSON ou multipart com `image`) |
 | PUT | `/user/listar/pet/editar/{id}` | Edita pet |
 | DELETE | `/user/listar/pet/delete/{id}` | Exclui pet |
-| GET | `/user/planos` | Plano atual |
-| POST | `/user/planos/pagamento` | Assina um plano |
-| DELETE | `/user/planos/cancelar` | Cancela o plano |
+| GET | `/user/planos[?id_pet=]` | Planos dos pets (`planos: [{id_pet, produto}]`) |
+| POST | `/user/planos/pagamento` | Assina um plano para um pet (`id_produto` e `id_pet`) |
+| DELETE | `/user/planos/cancelar/{idPet}` | Cancela o plano de um pet |
 | POST | `/agendamento` | Agenda consulta |
 | GET | `/agendamento/horarios?servico=veterinario&data=AAAA-MM-DD` | Horários sem profissional livre no dia |
 | GET | `/consultas` | Lista as consultas |
@@ -144,6 +144,13 @@ Erros seguem o formato `{"mensagem": "..."}`. Uma requisição sem login devolve
 | GET/POST | `/adm/logout` | Encerra a sessão |
 
 Exemplos prontos para o HTTP Client do IntelliJ estão em `requests/user.http`, `requests/employee.http` e `requests/admin.http`.
+
+## Planos
+
+- Cada pet tem o próprio plano, e um pet só pode ter um plano por vez.
+- Excluir um pet cancela o plano dele.
+- As listas de pets e clientes do funcionário e do admin trazem o campo `plano` de cada pet.
+- Bancos criados antes dessa regra precisam rodar `sql/plano-por-pet.sql` uma vez.
 
 ## Regras de agendamento
 
