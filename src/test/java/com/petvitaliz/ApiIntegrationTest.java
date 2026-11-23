@@ -660,6 +660,60 @@ class ApiIntegrationTest {
     }
 
     @Test
+    void userUpdatesTheProfileData() throws Exception {
+        String email = signUp();
+        Cookie user = login("/user/login", email);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("nome", "Kaio Eduardo");
+        changes.put("sobrenome", "Alves");
+        changes.put("email", email);
+        changes.put("telefone", "(61) 99876-5432");
+        changes.put("data_nascimento", "1999-03-04");
+        mockMvc.perform(putJson("/user/perfil-dados/atualizar", changes).cookie(user))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mensagem").value("Dados atualizados com sucesso"))
+                .andExpect(jsonPath("$.perfil.telefone").value("61998765432"));
+
+        mockMvc.perform(get("/user/buscar/perfil").cookie(user))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome").value("Kaio Eduardo"))
+                .andExpect(jsonPath("$.sobrenome").value("Alves"))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.telefone").value("61998765432"))
+                .andExpect(jsonPath("$.data_nascimento").value("1999-03-04T00:00:00.000Z"));
+
+        Map<String, Object> keepOptional = new LinkedHashMap<>();
+        keepOptional.put("nome", "Kaio");
+        keepOptional.put("sobrenome", "Alves");
+        keepOptional.put("telefone", null);
+        keepOptional.put("data_nascimento", null);
+        mockMvc.perform(putJson("/user/perfil-dados/atualizar", keepOptional).cookie(user))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.perfil.telefone").value("61998765432"))
+                .andExpect(jsonPath("$.perfil.data_nascimento").value("1999-03-04T00:00:00.000Z"));
+
+        Map<String, Object> takenPhone = new LinkedHashMap<>(keepOptional);
+        takenPhone.put("telefone", "61998765432");
+        mockMvc.perform(putJson("/user/perfil-dados/atualizar", takenPhone).cookie(loginNewUser()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensagem").value("Número de telefone já cadastrado"));
+
+        Map<String, Object> future = new LinkedHashMap<>(keepOptional);
+        future.put("data_nascimento", TODAY.plusDays(1).toString());
+        mockMvc.perform(putJson("/user/perfil-dados/atualizar", future).cookie(user))
+                .andExpect(status().isBadRequest());
+
+        Map<String, Object> shortName = new LinkedHashMap<>(keepOptional);
+        shortName.put("nome", "K");
+        mockMvc.perform(putJson("/user/perfil-dados/atualizar", shortName).cookie(user))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(putJson("/user/perfil-dados/atualizar", keepOptional))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void mobileClientAuthenticatesWithTheBearerToken() throws Exception {
         String email = signUp();
         Map<String, Object> credentials = Map.of("email", email, "senha", PASSWORD);

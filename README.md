@@ -97,6 +97,7 @@ Erros seguem o formato `{"mensagem": "..."}`. Uma requisição sem login devolve
 |---|---|---|
 | GET | `/user/home`, `/user/servicos`, `/user/servicos-de-emergencia` | Páginas logadas |
 | GET | `/user/buscar/perfil` | Dados do perfil |
+| PUT | `/user/perfil-dados/atualizar` | Edita nome, sobrenome, telefone e data de nascimento (telefone e data opcionais) |
 | POST | `/user/contato` | Envia mensagem de contato |
 | GET/POST | `/user/logout` | Encerra a sessão |
 | GET | `/user/listar/pet` | Lista os pets |
