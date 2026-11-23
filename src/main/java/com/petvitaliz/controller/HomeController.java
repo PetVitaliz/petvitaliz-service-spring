@@ -4,6 +4,7 @@ import com.petvitaliz.dto.ContactRequest;
 import com.petvitaliz.dto.MessageResponse;
 import com.petvitaliz.dto.ProductResponse;
 import com.petvitaliz.dto.ProfileResponse;
+import com.petvitaliz.dto.ProfileUpdateRequest;
 import com.petvitaliz.security.AuthenticatedUser;
 import com.petvitaliz.service.ProductService;
 import com.petvitaliz.service.UserService;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -103,6 +105,16 @@ public class HomeController {
     @GetMapping("/user/buscar/perfil")
     public ProfileResponse profile(@AuthenticationPrincipal AuthenticatedUser user) {
         return userService.getProfile(user.id());
+    }
+
+    @PutMapping("/user/perfil-dados/atualizar")
+    public Map<String, Object> updateProfile(@AuthenticationPrincipal AuthenticatedUser user,
+                                             @Valid @RequestBody ProfileUpdateRequest request) {
+        ProfileResponse profile = userService.updateProfile(user.id(), request);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("mensagem", "Dados atualizados com sucesso");
+        body.put("perfil", profile);
+        return body;
     }
 
     private static Map<String, Object> publicPage(String page, String notice) {
