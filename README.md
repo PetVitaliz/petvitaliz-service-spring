@@ -151,7 +151,6 @@ Exemplos prontos para o HTTP Client do IntelliJ estão em `requests/user.http`, 
 - Cada pet tem o próprio plano, e um pet só pode ter um plano por vez.
 - Excluir um pet cancela o plano dele.
 - As listas de pets e clientes do funcionário e do admin trazem o campo `plano` de cada pet.
-- Bancos criados antes dessa regra precisam rodar `sql/plano-por-pet.sql` uma vez.
 
 ## Regras de agendamento
 
