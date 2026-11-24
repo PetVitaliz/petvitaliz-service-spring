@@ -805,6 +805,21 @@ class ApiIntegrationTest {
         mockMvc.perform(post("/adm/logout").cookie(admin)).andExpect(status().isOk());
     }
 
+    @Test
+    void adminSeesAppointmentsOfEveryDay() throws Exception {
+        createEmployee(EmployeeSpecialty.VETERINARIAN);
+        int petId = createPet(loginNewUser());
+        Cookie admin = loginNewAdmin();
+        String laterDate = TODAY.plusDays(3).toString();
+
+        mockMvc.perform(postJson("/adm/agendamento", appointmentBody("veterinario", petId, laterDate, "10:00"))
+                        .cookie(admin))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/adm/consultas").cookie(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.consultas[*].data_consulta", hasItem(laterDate + "T00:00:00.000Z")));
+    }
+
     private Cookie loginNewAdmin() throws Exception {
         Admin admin = new Admin();
         admin.setUsername("admin" + SEQUENCE.incrementAndGet());
