@@ -130,7 +130,7 @@ Erros seguem o formato `{"mensagem": "..."}`. Uma requisição sem login devolve
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/adm` | Home do administrador |
-| GET | `/adm/consultas` | Consultas do dia |
+| GET | `/adm/consultas` | Todas as consultas (mais recentes primeiro) |
 | PUT | `/adm/consultas/atualizar/{id}` | Muda o status de uma consulta |
 | DELETE | `/adm/consultas/cancelar/{id}` | Cancela uma consulta |
 | POST | `/adm/agendamento` | Agenda consulta para um cliente |

@@ -37,6 +37,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
             + "where a.appointmentDate = :date order by a.startTime asc")
     List<Appointment> findAllByDate(@Param("date") LocalDate date);
 
+    @Query("select a from Appointment a join fetch a.pet p join fetch p.owner join fetch a.employee "
+            + "order by a.appointmentDate desc, a.startTime asc")
+    List<Appointment> findAllWithPetOwnerAndEmployee();
+
     boolean existsByPetIdAndAppointmentDateAndStartTimeAndStatusNot(
             Integer petId, LocalDate appointmentDate, String startTime, AppointmentStatus status);
 

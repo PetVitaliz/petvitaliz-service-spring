@@ -55,8 +55,8 @@ public class AdminController {
     }
 
     @GetMapping("/consultas")
-    public Map<String, List<AppointmentResponse>> todayAppointments() {
-        return Map.of("consultas", overviewService.listTodayAppointments());
+    public Map<String, List<AppointmentResponse>> appointments() {
+        return Map.of("consultas", overviewService.listAppointments());
     }
 
     @PutMapping("/consultas/atualizar/{id}")

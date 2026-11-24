@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -20,11 +18,10 @@ public class AdminOverviewService {
     private final AppointmentRepository appointmentRepository;
     private final PetRepository petRepository;
     private final SubscriptionService subscriptionService;
-    private final Clock clock;
 
     @Transactional(readOnly = true)
-    public List<AppointmentResponse> listTodayAppointments() {
-        return appointmentRepository.findAllByDate(LocalDate.now(clock)).stream()
+    public List<AppointmentResponse> listAppointments() {
+        return appointmentRepository.findAllWithPetOwnerAndEmployee().stream()
                 .map(AppointmentResponse::forAdmin)
                 .toList();
     }
